@@ -1,6 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import {
   LucideAngularModule,
@@ -146,7 +145,6 @@ import {
 })
 export class LoginPageComponent {
   private auth = inject(AuthService);
-  private router = inject(Router);
 
   readonly FlaskConical = FlaskConical;
   readonly ShieldCheck = ShieldCheck;
@@ -162,8 +160,9 @@ export class LoginPageComponent {
     this.loading.set(true);
     this.errorMsg.set(null);
     try {
+      // loginRedirect saca al usuario de la app hacia Microsoft;
+      // el retorno lo procesa AppComponent con handleRedirectObservable().
       await this.auth.loginWithMicrosoft();
-      await this.router.navigate(['/dashboard']);
     } catch (err) {
       this.errorMsg.set(
         'No se pudo iniciar sesión con Microsoft. Verifica tu conexión e inténtalo de nuevo.'

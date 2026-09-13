@@ -1,107 +1,78 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import {
-  PublicClientApplication,
-  AccountInfo,
-  AuthenticationResult,
-} from '@azure/msal-browser';
+import { MsalService, MsalBroadcastService } from '@azure/msal-angular';
+import { AccountInfo, InteractionStatus } from '@azure/msal-browser';
+import { filter } from 'rxjs/operators';
+import { firstValueFrom } from 'rxjs';
 import { AppUser } from '../models';
 
-/**
- * Configuración MSAL para Azure AD SSO.
- *
- * Reemplaza clientId y tenantId con los valores reales del App Registration
- * en Azure Portal → App registrations.
- */
-const MSAL_CONFIG = {
-  auth: {
-    clientId: 'TU_CLIENT_ID_AZURE_AD',
-    authority: 'https://login.microsoftonline.com/TU_TENANT_ID',
-    redirectUri: window.location.origin + '/',
-  },
-  cache: {
-    cacheLocation: 'localStorage',
-    storeAuthStateInCookie: false,
-  },
-};
-
-const SCOPES = ['user.read'];
+const SCOPES = ['User.Read'];
 
 /**
- * Servicio de autenticación exclusivo con Microsoft (Azure AD SSO).
+ * Servicio de autenticación exclusivo con Microsoft (Azure AD / Entra ID SSO).
  *
  * No hay login por rol. El usuario se autentica con su cuenta institucional
- * de Microsoft y la plataforma obtiene nombre, correo y cualquier rol
- * informativo desde el token JWT. El frontend no selecciona rol.
+ * de Microsoft (login por redirect) y la plataforma obtiene nombre y correo
+ * desde la cuenta activa de MSAL. Los permisos reales se derivan del JWT
+ * validado por el API Gateway; el frontend no selecciona rol.
+ *
+ * La instancia de MSAL (clientId/authority/redirectUri) se configura una
+ * sola vez en `msal-config.ts` y se provee vía MSAL_INSTANCE en
+ * `app.config.ts`; este servicio solo consume `MsalService`.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private msalInstance: PublicClientApplication | null = null;
-  private initialized = false;
+  private readonly msalService = inject(MsalService);
+  private readonly msalBroadcastService = inject(MsalBroadcastService);
 
   /** Usuario actual — null si no hay sesión iniciada */
-  readonly currentUser = signal<AppUser | null>(this.readStoredUser());
+  readonly currentUser = signal<AppUser | null>(null);
 
   /** True cuando hay sesión activa */
   readonly isAuthenticated = computed(() => this.currentUser() !== null);
 
   constructor() {
-    // Solo inicializamos MSAL si hay configuración real.
-    // Si clientId es el placeholder, el servicio funciona en modo demo
-    // para permitir desarrollo local sin Azure.
-    if (MSAL_CONFIG.auth.clientId !== 'TU_CLIENT_ID_AZURE_AD') {
-      this.msalInstance = new PublicClientApplication(MSAL_CONFIG);
-    }
+    // Estado inicial, por si ya había una cuenta en caché (localStorage).
+    this.updateUserFromActiveAccount();
+
+    // Se refresca cada vez que MSAL termina de procesar login/redirect.
+    this.msalBroadcastService.inProgress$
+      .pipe(filter((status: InteractionStatus) => status === InteractionStatus.None))
+      .subscribe(() => this.updateUserFromActiveAccount());
   }
 
   /**
-   * Inicia sesión con Microsoft. Redirige a la página de login de Microsoft
-   * o usa popup según el modo configurado.
-   *
-   * En modo demo (sin clientId configurado), simula un login con un
-   * usuario de ejemplo de Microsoft Entra ID.
+   * Inicia sesión con Microsoft Entra ID vía redirect. El navegador sale
+   * hacia login.microsoftonline.com y vuelve a `redirectUri`; el retorno
+   * lo procesa `AppComponent` con `handleRedirectObservable()`.
    */
   async loginWithMicrosoft(): Promise<void> {
-    // Modo demo — sin Azure configurado
-    if (!this.msalInstance) {
-      this.simulateMicrosoftLogin();
+    await firstValueFrom(this.msalService.loginRedirect({ scopes: SCOPES }));
+  }
+
+  /**
+   * Cierra sesión en Microsoft (redirect) y limpia el estado local.
+   */
+  async logout(): Promise<void> {
+    await firstValueFrom(this.msalService.logoutRedirect());
+  }
+
+  private updateUserFromActiveAccount(): void {
+    const accounts = this.msalService.instance.getAllAccounts();
+    if (accounts.length === 0) {
+      this.currentUser.set(null);
       return;
     }
 
-    // Inicializar MSAL (una sola vez)
-    if (!this.initialized) {
-      await this.msalInstance.initialize();
-      this.initialized = true;
+    let account = this.msalService.instance.getActiveAccount();
+    if (!account) {
+      account = accounts[0];
+      this.msalService.instance.setActiveAccount(account);
     }
 
-    try {
-      const response: AuthenticationResult = await this.msalInstance.loginPopup({
-        scopes: SCOPES,
-        prompt: 'select_account',
-      });
-
-      this.msalInstance.setActiveAccount(response.account);
-      this.setUserFromAccount(response.account, response.accessToken);
-    } catch (err) {
-      console.error('Error en login de Microsoft:', err);
-      throw err;
-    }
+    this.currentUser.set(this.mapAccountToUser(account));
   }
 
-  /**
-   * Cierra sesión en Microsoft y limpia el estado local.
-   */
-  async logout(): Promise<void> {
-    if (this.msalInstance && this.initialized) {
-      const account = this.msalInstance.getActiveAccount();
-      if (account) {
-        await this.msalInstance.logoutPopup({ account });
-      }
-    }
-    this.currentUser.set(null);
-    localStorage.removeItem('campuslab_user');
-  }
-
-  private setUserFromAccount(account: AccountInfo, accessToken: string): void {
+  private mapAccountToUser(account: AccountInfo): AppUser {
     const name = account.name ?? account.username ?? 'Usuario';
     const initials = name
       .split(' ')
@@ -110,37 +81,11 @@ export class AuthService {
       .slice(0, 2)
       .toUpperCase();
 
-    // Los roles reales se derivan del JWT del backend en producción.
-    // Aquí simplemente dejamos "Azure AD" como referencia informativa.
-    const user: AppUser = {
+    return {
       name,
       email: account.username,
       avatar: initials,
       role: 'Azure AD',
     };
-
-    this.currentUser.set(user);
-    localStorage.setItem('campuslab_user', JSON.stringify(user));
-  }
-
-  private simulateMicrosoftLogin(): void {
-    // Simulación para desarrollo local sin Azure configurado.
-    const user: AppUser = {
-      name: 'Carmen Vidal',
-      email: 'carmen.vidal@duocuc.cl',
-      avatar: 'CV',
-      role: 'Azure AD',
-    };
-    this.currentUser.set(user);
-    localStorage.setItem('campuslab_user', JSON.stringify(user));
-  }
-
-  private readStoredUser(): AppUser | null {
-    try {
-      const raw = localStorage.getItem('campuslab_user');
-      return raw ? (JSON.parse(raw) as AppUser) : null;
-    } catch {
-      return null;
-    }
   }
 }
