@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { MsalService } from '@azure/msal-angular';
 import { Subject, takeUntil } from 'rxjs';
 
@@ -11,6 +11,7 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly msalService = inject(MsalService);
+  private readonly router = inject(Router);
   private readonly destroying$ = new Subject<void>();
 
   ngOnInit(): void {
@@ -20,7 +21,22 @@ export class AppComponent implements OnInit, OnDestroy {
       .handleRedirectObservable()
       .pipe(takeUntil(this.destroying$))
       .subscribe({
-        error: (error) => console.error('Error procesando el retorno de MSAL:', error),
+        next: (result) => {
+          // Si el redirect fue exitoso y hay cuenta activa, redirige al dashboard
+          console.log('✅ Redirect procesado correctamente:', result);
+          const accounts = this.msalService.instance.getAllAccounts();
+          if (accounts.length > 0) {
+            // Pequeña demora para asegurar que el guard pueda verificar la sesión
+            setTimeout(() => {
+              this.router.navigate(['/dashboard']).catch((err) => {
+                console.error('Error navegando al dashboard:', err);
+              });
+            }, 100);
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error procesando el retorno de MSAL:', error);
+        },
       });
   }
 

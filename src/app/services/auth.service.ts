@@ -27,8 +27,32 @@ export class AuthService {
   /** Usuario actual — null si no hay sesión iniciada */
   readonly currentUser = signal<AppUser | null>(null);
 
-  /** True cuando hay sesión activa */
-  readonly isAuthenticated = computed(() => this.currentUser() !== null);
+  /** True solo cuando hay sesión activa Y tiene roles válidos */
+  readonly isAuthenticated = computed(() => {
+    const user = this.currentUser();
+    if (!user) return false;
+
+    // Validar que tiene roles en el token
+    const accounts = this.msalService.instance.getAllAccounts();
+    if (accounts.length === 0) return false;
+
+    const account = this.msalService.instance.getActiveAccount();
+    if (!account) return false;
+
+    // Buscar roles en múltiples ubicaciones
+    const roles =
+      account.idTokenClaims?.['roles'] ||
+      account.idTokenClaims?.['appRoles'] ||
+      account.idTokenClaims?.['wids'];
+
+    const hasValidRoles = roles && Array.isArray(roles) && roles.length > 0;
+
+    if (!hasValidRoles) {
+      console.warn('⚠️ [AuthService] isAuthenticated=false: Usuario sin roles válidos');
+    }
+
+    return hasValidRoles;
+  });
 
   constructor() {
     // Estado inicial, por si ya había una cuenta en caché (localStorage).
@@ -57,8 +81,11 @@ export class AuthService {
   }
 
   private updateUserFromActiveAccount(): void {
+    console.log('🔍 [AuthService] updateUserFromActiveAccount() - Verificando sesión...');
+
     const accounts = this.msalService.instance.getAllAccounts();
     if (accounts.length === 0) {
+      console.warn('❌ [AuthService] Sin cuentas activas');
       this.currentUser.set(null);
       return;
     }
@@ -69,6 +96,75 @@ export class AuthService {
       this.msalService.instance.setActiveAccount(account);
     }
 
+    console.log('📋 [AuthService] Account completo:', account);
+    console.log('📋 [AuthService] idTokenClaims:', account.idTokenClaims);
+
+    // VALIDACIÓN CRÍTICA: Leer roles de MÚLTIPLES fuentes
+    let roles: string[] = [];
+
+    // Opción 1: Desde idTokenClaims
+    if (account.idTokenClaims?.['roles']) {
+      roles = account.idTokenClaims['roles'] as string[];
+      console.log('✓ Roles desde idTokenClaims.roles:', roles);
+    }
+    // Opción 2: Desde appRoles
+    else if (account.idTokenClaims?.['appRoles']) {
+      roles = account.idTokenClaims['appRoles'] as string[];
+      console.log('✓ Roles desde idTokenClaims.appRoles:', roles);
+    }
+    // Opción 3: Desde wids
+    else if (account.idTokenClaims?.['wids']) {
+      roles = account.idTokenClaims['wids'] as string[];
+      console.log('✓ Roles desde idTokenClaims.wids:', roles);
+    }
+    // Opción 4: Parsear manualmente del JWT
+    else {
+      console.warn('⚠️ No encontré roles en idTokenClaims, intentando parsear JWT manualmente...');
+      try {
+        // Obtener el token del localStorage
+        const tokenKey = Object.keys(localStorage).find(
+          (key) => key.includes('id_token') && key.includes('MSAL')
+        );
+        if (tokenKey) {
+          const token = localStorage.getItem(tokenKey);
+          console.log('📋 Token desde localStorage:', token?.substring(0, 100) + '...');
+
+          if (token) {
+            // Decodificar JWT manualmente
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(atob(parts[1]));
+              console.log('📋 JWT Payload decodificado:', payload);
+
+              if (payload.roles && Array.isArray(payload.roles)) {
+                roles = payload.roles;
+                console.log('✓ Roles extraídos del JWT:', roles);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error al parsear JWT:', error);
+      }
+    }
+
+    const hasValidRoles = roles && Array.isArray(roles) && roles.length > 0;
+
+    console.log('📋 Roles finales encontrados:', roles);
+    console.log('📋 hasValidRoles:', hasValidRoles);
+
+    if (!hasValidRoles) {
+      console.error(
+        '❌ [AuthService] USUARIO SIN ROLES - Logout forzado',
+        '\n   Usuario:', account.username,
+        '\n   OID:', account.localAccountId
+      );
+      this.currentUser.set(null);
+      this.msalService.logout();
+      return;
+    }
+
+    console.log('✅ [AuthService] Usuario con roles válidos:', roles);
     this.currentUser.set(this.mapAccountToUser(account));
   }
 
