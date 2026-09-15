@@ -160,7 +160,7 @@ export class AuthService {
         '\n   OID:', account.localAccountId
       );
       this.currentUser.set(null);
-      this.msalService.logout();
+      this.msalService.logoutRedirect().subscribe();
       return;
     }
 
