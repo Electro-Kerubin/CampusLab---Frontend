@@ -5,10 +5,8 @@ import { AuthService } from '../services/auth.service';
 import { PageId } from '../models';
 import {
   LucideAngularModule,
-  Bell,
   Settings,
   ChevronDown,
-  Wifi,
   Search,
   FlaskConical,
 } from 'lucide-angular';
@@ -57,19 +55,6 @@ interface NavItem {
 
         <!-- Right side -->
         <div class="flex items-center gap-3">
-          <!-- Azure AD badge -->
-          <div class="flex items-center gap-1.5 bg-[#2d3045] border border-[#3d4060] rounded-md px-3 py-1.5">
-            <lucide-icon [img]="Wifi" size="12" class="text-[#5cb85c]" />
-            <span class="text-xs text-gray-300 font-mono">Azure AD SSO</span>
-            <span class="text-[10px] text-[#5cb85c] font-semibold ml-1">conectado</span>
-          </div>
-
-          <!-- Notifications -->
-          <button class="relative w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#2d3045] text-gray-400 hover:text-white transition-colors">
-            <lucide-icon [img]="Bell" size="16" />
-            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
           <!-- Settings -->
           <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#2d3045] text-gray-400 hover:text-white transition-colors">
             <lucide-icon [img]="Settings" size="16" />
@@ -137,8 +122,6 @@ export class LayoutComponent {
 
   readonly FlaskConical = FlaskConical;
   readonly Search = Search;
-  readonly Wifi = Wifi;
-  readonly Bell = Bell;
   readonly Settings = Settings;
   readonly ChevronDown = ChevronDown;
 

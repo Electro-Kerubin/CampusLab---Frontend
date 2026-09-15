@@ -84,7 +84,7 @@ export const authGuard: CanActivateFn = () => {
         // LOGOUT COMPLETO
         localStorage.clear();
         sessionStorage.clear();
-        msalService.logout();
+        msalService.logoutRedirect().subscribe();
 
         return router.parseUrl('/login');
       }

@@ -38,10 +38,13 @@ export class AuthInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    // Agregar token Bearer a la solicitud
-    const token = account.idTokenClaims?.['id_token'] || 
-                  localStorage.getItem('msal.idtoken');
-    
+    // Agregar token Bearer a la solicitud.
+    // Usamos el id_token (no el access_token): el access_token que MSAL
+    // devuelve para el scope "User.Read" está emitido para Microsoft Graph
+    // (audience 00000003-...) y no incluye el claim "roles" del App
+    // Registration de CampusLab. El id_token sí lo trae.
+    const token = account.idToken;
+
     if (token) {
       req = req.clone({
         setHeaders: {
@@ -57,7 +60,7 @@ export class AuthInterceptor implements HttpInterceptor {
         if (error.status === 401) {
           // Token inválido o expirado
           console.error('❌ Token rechazado por el servidor (401)');
-          this.msalService.logout();
+          this.msalService.logoutRedirect().subscribe();
           this.router.navigate(['/login']);
         } else if (error.status === 403) {
           // No tiene permisos
