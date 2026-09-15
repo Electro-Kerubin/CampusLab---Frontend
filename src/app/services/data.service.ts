@@ -106,41 +106,18 @@ export class DataService {
 
   createBooking(payload: CreateBookingRequest): Observable<Booking> {
     return this.http.post<Booking>(`${this.api}/bookings`, payload).pipe(
-      tap((created) => this.bookings.update((cur) => [created, ...cur])),
-      catchError(() => {
-        const local: Booking = {
-          id: `RES-LOCAL-${Date.now()}`,
-          lab: payload.lab,
-          equipment: payload.equipment || 'Por definir',
-          requester: payload.requester || 'Usuario actual',
-          role: 'Estudiante',
-          date: payload.date,
-          time: payload.time,
-          status: 'SOLICITADA',
-        };
-        this.bookings.update((cur) => [local, ...cur]);
-        return of(local);
-      })
+      tap((created) => this.bookings.update((cur) => [created, ...cur]))
     );
   }
 
-  updateBookingStatus(id: string, status: BookingStatus): Observable<Booking> {
+  updateBookingStatus(id: number, status: BookingStatus): Observable<Booking> {
     const body: UpdateBookingStatusRequest = { status };
     return this.http
-      .put<Booking>(`${this.api}/bookings/${encodeURIComponent(id)}/status`, body)
+      .put<Booking>(`${this.api}/bookings/${id}/status`, body)
       .pipe(
-        tap(() =>
-          this.bookings.update((cur) =>
-            cur.map((b) => (b.id === id ? { ...b, status } : b))
-          )
-        ),
-        catchError(() => {
-          this.bookings.update((cur) =>
-            cur.map((b) => (b.id === id ? { ...b, status } : b))
-          );
-          const updated = this.bookings().find((b) => b.id === id);
-          return of(updated as Booking);
-        })
+        tap((updated) =>
+          this.bookings.update((cur) => cur.map((b) => (b.id === id ? updated : b)))
+        )
       );
   }
 
@@ -235,7 +212,7 @@ export class DataService {
   readonly workflowSteps = computed<WorkflowStep[]>(() => {
     const bs = this.bookings();
     const count = (s: BookingStatus) => bs.filter((b) => b.status === s).length;
-    const activeStatuses: BookingStatus[] = ['SOLICITADA', 'APROBADA', 'EN_PREPARACIÓN', 'EN_USO'];
+    const activeStatuses: BookingStatus[] = ['SOLICITADA', 'APROBADA', 'EN_PREPARACION', 'EN_USO'];
     const current = activeStatuses
       .map((s) => ({ s, n: count(s) }))
       .sort((a, b) => b.n - a.n)[0]?.s;
@@ -261,7 +238,7 @@ export class DataService {
   readonly activeBookingsCount = computed(
     () =>
       this.bookings().filter((b) =>
-        ['APROBADA', 'EN_PREPARACIÓN', 'EN_USO'].includes(b.status)
+        ['APROBADA', 'EN_PREPARACION', 'EN_USO'].includes(b.status)
       ).length
   );
 
@@ -288,15 +265,16 @@ export class DataService {
 }
 
 // ─── Datos semilla (fallback sin backend) ─────────────────────────────────
+// Mismo shape que BookingResponse de ms-campuslab-bookings (vía el BFF).
 const SEED_BOOKINGS: Booking[] = [
-  { id: 'RES-2024-001', lab: 'Laboratorio A102', equipment: 'Impresora 3D Ultimaker', requester: 'María González', role: 'Estudiante', date: '2026-09-11', time: '09:00–11:00', status: 'EN_PREPARACIÓN' },
-  { id: 'RES-2024-002', lab: 'Laboratorio B204', equipment: 'Microscopio Electrónico', requester: 'Carlos Ruiz', role: 'Técnico', date: '2026-09-11', time: '11:00–13:00', status: 'APROBADA' },
-  { id: 'RES-2024-003', lab: 'Sala Cómputo C1', equipment: 'PC Alta Gama × 5', requester: 'Ana Torres', role: 'Estudiante', date: '2026-09-11', time: '14:00–16:00', status: 'SOLICITADA' },
-  { id: 'RES-2024-004', lab: 'Laboratorio A102', equipment: 'Kit Electrónica Arduino', requester: 'Pedro Silva', role: 'Estudiante', date: '2026-09-10', time: '10:00–12:00', status: 'EN_USO' },
-  { id: 'RES-2024-005', lab: 'Laboratorio D301', equipment: 'Osciloscopio Digital', requester: 'Laura Méndez', role: 'Técnico', date: '2026-09-10', time: '08:00–10:00', status: 'DEVUELTA' },
-  { id: 'RES-2024-006', lab: 'Sala Cómputo C2', equipment: 'PC Alta Gama × 3', requester: 'Jorge Pinto', role: 'Estudiante', date: '2026-09-09', time: '15:00–17:00', status: 'CANCELADA' },
-  { id: 'RES-2024-007', lab: 'Laboratorio B204', equipment: 'Microscopio Óptico', requester: 'Sofía Reyes', role: 'Estudiante', date: '2026-09-12', time: '13:00–15:00', status: 'SOLICITADA' },
-  { id: 'RES-2024-008', lab: 'Laboratorio A102', equipment: 'Impresora 3D Prusa', requester: 'Andrés Vega', role: 'Técnico', date: '2026-09-12', time: '16:00–18:00', status: 'APROBADA' },
+  { id: 1, resourceId: 101, resourceNombre: 'Laboratorio A102', studentEmail: 'maria.gonzalez@duocuc.cl', purpose: 'Impresión 3D — proyecto final', startTime: '2026-09-11T09:00:00', endTime: '2026-09-11T11:00:00', status: 'EN_PREPARACION', createdAt: '2026-09-10T18:00:00', updatedAt: '2026-09-11T08:00:00' },
+  { id: 2, resourceId: 204, resourceNombre: 'Laboratorio B204', studentEmail: 'carlos.ruiz@duocuc.cl', purpose: 'Microscopía electrónica — práctica', startTime: '2026-09-11T11:00:00', endTime: '2026-09-11T13:00:00', status: 'APROBADA', createdAt: '2026-09-10T12:00:00', updatedAt: '2026-09-10T12:30:00' },
+  { id: 3, resourceId: 301, resourceNombre: 'Sala Cómputo C1', studentEmail: 'ana.torres@duocuc.cl', purpose: 'Renderizado de proyecto 3D', startTime: '2026-09-11T14:00:00', endTime: '2026-09-11T16:00:00', status: 'SOLICITADA', createdAt: '2026-09-11T09:00:00', updatedAt: '2026-09-11T09:00:00' },
+  { id: 4, resourceId: 102, resourceNombre: 'Laboratorio A102', studentEmail: 'pedro.silva@duocuc.cl', purpose: 'Kit Arduino — prototipo IoT', startTime: '2026-09-10T10:00:00', endTime: '2026-09-10T12:00:00', status: 'EN_USO', createdAt: '2026-09-09T15:00:00', updatedAt: '2026-09-10T10:02:00' },
+  { id: 5, resourceId: 401, resourceNombre: 'Laboratorio D301', studentEmail: 'laura.mendez@duocuc.cl', purpose: 'Osciloscopio — medición de señales', startTime: '2026-09-10T08:00:00', endTime: '2026-09-10T10:00:00', status: 'DEVUELTA', createdAt: '2026-09-09T14:00:00', updatedAt: '2026-09-10T10:05:00' },
+  { id: 6, resourceId: 302, resourceNombre: 'Sala Cómputo C2', studentEmail: 'jorge.pinto@duocuc.cl', purpose: 'Renderizado de video', startTime: '2026-09-09T15:00:00', endTime: '2026-09-09T17:00:00', status: 'CANCELADA', createdAt: '2026-09-08T10:00:00', updatedAt: '2026-09-09T14:22:00' },
+  { id: 7, resourceId: 205, resourceNombre: 'Laboratorio B204', studentEmail: 'sofia.reyes@duocuc.cl', purpose: 'Microscopía óptica — práctica', startTime: '2026-09-12T13:00:00', endTime: '2026-09-12T15:00:00', status: 'SOLICITADA', createdAt: '2026-09-12T07:58:00', updatedAt: '2026-09-12T07:58:00' },
+  { id: 8, resourceId: 103, resourceNombre: 'Laboratorio A102', studentEmail: 'andres.vega@duocuc.cl', purpose: 'Impresión 3D — pieza de repuesto', startTime: '2026-09-12T16:00:00', endTime: '2026-09-12T18:00:00', status: 'APROBADA', createdAt: '2026-09-11T20:00:00', updatedAt: '2026-09-12T08:00:00' },
 ];
 
 const SEED_LABS: Lab[] = [
@@ -331,7 +309,7 @@ const SEED_SUPPLIES: Supply[] = [
 const SEED_AUDIT_EVENTS: AuditEvent[] = [
   { id: 'EVT-001', reservaId: 'RES-2024-001', tipo: 'CREADA', usuario: 'María González', rol: 'Estudiante', lab: 'Lab A102', timestamp: '2026-09-11 08:30:14', ip: '192.168.1.45', traceId: 'abc-123-def', detalle: 'Reserva creada vía portal web' },
   { id: 'EVT-002', reservaId: 'RES-2024-001', tipo: 'APROBADA', usuario: 'Rodrigo Muñoz', rol: 'Técnico', lab: 'Lab A102', timestamp: '2026-09-11 08:52:03', ip: '10.0.1.12', traceId: 'abc-124-def', detalle: 'Aprobación manual por técnico de turno' },
-  { id: 'EVT-003', reservaId: 'RES-2024-001', tipo: 'EN_PREPARACIÓN', usuario: 'Rodrigo Muñoz', rol: 'Técnico', lab: 'Lab A102', timestamp: '2026-09-11 09:15:22', ip: '10.0.1.12', traceId: 'abc-125-def', detalle: 'Inicio de preparación de sala y equipos' },
+  { id: 'EVT-003', reservaId: 'RES-2024-001', tipo: 'EN_PREPARACION', usuario: 'Rodrigo Muñoz', rol: 'Técnico', lab: 'Lab A102', timestamp: '2026-09-11 09:15:22', ip: '10.0.1.12', traceId: 'abc-125-def', detalle: 'Inicio de preparación de sala y equipos' },
   { id: 'EVT-004', reservaId: 'RES-2024-002', tipo: 'CREADA', usuario: 'Carlos Ruiz', rol: 'Técnico', lab: 'Lab B204', timestamp: '2026-09-11 09:00:05', ip: '10.0.1.8', traceId: 'bcd-201-efg', detalle: 'Reserva creada por técnico para clase programada' },
   { id: 'EVT-005', reservaId: 'RES-2024-002', tipo: 'APROBADA', usuario: 'Sistema AD', rol: 'Admin', lab: 'Lab B204', timestamp: '2026-09-11 09:01:00', ip: '10.0.0.1', traceId: 'bcd-202-efg', detalle: 'Aprobación automática (reserva por técnico autorizado)' },
   { id: 'EVT-006', reservaId: 'RES-2024-003', tipo: 'CREADA', usuario: 'Ana Torres', rol: 'Estudiante', lab: 'Sala C1', timestamp: '2026-09-11 09:45:31', ip: '192.168.2.77', traceId: 'cde-301-fgh', detalle: 'Reserva creada vía app móvil' },

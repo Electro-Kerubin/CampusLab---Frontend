@@ -2,10 +2,12 @@
 
 export type PageId = 'dashboard' | 'bookings' | 'catalog' | 'reports' | 'audit';
 
+// Coincide 1:1 con el enum BookingStatus de ms-campuslab-bookings.
+// Ojo: EN_PREPARACION va SIN tilde (así está en el backend).
 export type BookingStatus =
   | 'SOLICITADA'
   | 'APROBADA'
-  | 'EN_PREPARACIÓN'
+  | 'EN_PREPARACION'
   | 'EN_USO'
   | 'DEVUELTA'
   | 'CANCELADA';
@@ -13,7 +15,7 @@ export type BookingStatus =
 export type EventType =
   | 'CREADA'
   | 'APROBADA'
-  | 'EN_PREPARACIÓN'
+  | 'EN_PREPARACION'
   | 'EN_USO'
   | 'DEVUELTA'
   | 'CANCELADA'
@@ -28,15 +30,23 @@ export interface AppUser {
   role: string; // Informativo - proviene del token de Azure AD, no se elige en login
 }
 
+/**
+ * Refleja BookingResponse de ms-campuslab-bookings (vía ms-campuslab-bff).
+ * startTime/endTime/createdAt/updatedAt llegan como LocalDateTime ISO
+ * (ej: "2026-09-20T09:00:00", sin zona horaria).
+ */
 export interface Booking {
-  id: string;
-  lab: string;
-  equipment: string;
-  requester: string;
-  role: string;
-  date: string;
-  time: string;
+  id: number;
+  resourceId: number;
+  /** Nombre del recurso, agregado por el BFF desde ms-catalog (puede venir null si ese servicio no responde). */
+  resourceNombre: string | null;
+  studentEmail: string;
+  purpose: string;
+  startTime: string;
+  endTime: string;
   status: BookingStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Lab {
@@ -83,14 +93,18 @@ export interface AuditEvent {
 
 // ─── Contratos REST con el backend Spring Boot ─────────────────────────
 
-/** POST /api/bookings */
+/**
+ * POST /api/bookings.
+ * studentEmail se omite normalmente: el backend lo completa desde el JWT
+ * del usuario autenticado. Solo tiene sentido enviarlo si un TECNICO/ADMIN
+ * reserva a nombre de otro estudiante.
+ */
 export interface CreateBookingRequest {
-  lab: string;
-  equipment: string;
-  date: string;
-  time: string;
-  purpose?: string;
-  requester?: string;
+  resourceId: number;
+  purpose: string;
+  startTime: string;
+  endTime: string;
+  studentEmail?: string;
 }
 
 /** PUT /api/bookings/{id}/status */
@@ -160,7 +174,7 @@ export interface WorkflowStep {
 export const STATUS_LABELS: Record<BookingStatus, string> = {
   SOLICITADA: 'Solicitada',
   APROBADA: 'Aprobada',
-  'EN_PREPARACIÓN': 'En Preparación',
+  EN_PREPARACION: 'En Preparación',
   EN_USO: 'En Uso',
   DEVUELTA: 'Devuelta',
   CANCELADA: 'Cancelada',
@@ -169,7 +183,7 @@ export const STATUS_LABELS: Record<BookingStatus, string> = {
 export const STATUS_CLASSES: Record<BookingStatus, string> = {
   SOLICITADA: 'status-solicitada',
   APROBADA: 'status-aprobada',
-  'EN_PREPARACIÓN': 'status-en_preparacion',
+  EN_PREPARACION: 'status-en_preparacion',
   EN_USO: 'status-en_uso',
   DEVUELTA: 'status-devuelta',
   CANCELADA: 'status-cancelada',
@@ -178,8 +192,22 @@ export const STATUS_CLASSES: Record<BookingStatus, string> = {
 export const ALL_STATUSES: BookingStatus[] = [
   'SOLICITADA',
   'APROBADA',
-  'EN_PREPARACIÓN',
+  'EN_PREPARACION',
   'EN_USO',
   'DEVUELTA',
   'CANCELADA',
 ];
+
+/**
+ * Máquina de estados real de ms-campuslab-bookings (ver
+ * BookingService.TRANSICIONES_VALIDAS). El frontend la usa para no ofrecer
+ * transiciones que el backend rechazaría con 409/400.
+ */
+export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  SOLICITADA: ['APROBADA', 'CANCELADA'],
+  APROBADA: ['EN_PREPARACION', 'CANCELADA'],
+  EN_PREPARACION: ['EN_USO', 'CANCELADA'],
+  EN_USO: ['DEVUELTA'],
+  DEVUELTA: [],
+  CANCELADA: [],
+};
