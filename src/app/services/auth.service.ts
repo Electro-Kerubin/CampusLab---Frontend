@@ -3,7 +3,7 @@ import { MsalService, MsalBroadcastService } from '@azure/msal-angular';
 import { AccountInfo, InteractionStatus } from '@azure/msal-browser';
 import { filter } from 'rxjs/operators';
 import { firstValueFrom } from 'rxjs';
-import { AppUser } from '../models';
+import { AppUser, Role } from '../models';
 
 const SCOPES = ['User.Read'];
 
@@ -53,6 +53,22 @@ export class AuthService {
 
     return hasValidRoles;
   });
+
+  /**
+   * True si el usuario actual tiene alguno de los roles indicados. Refleja
+   * en el frontend las mismas reglas que cada microservicio ya aplica con
+   * @PreAuthorize — sirve para mostrar/ocultar acciones (crear reserva,
+   * aprobar, agregar al catálogo, ajustar stock, etc.), no como mecanismo de
+   * seguridad: la autorización real siempre la hace el backend con el JWT.
+   */
+  hasAnyRole(...roles: Role[]): boolean {
+    const userRoles = this.currentUser()?.roles ?? [];
+    return roles.some((r) => userRoles.includes(r));
+  }
+
+  hasRole(role: Role): boolean {
+    return this.hasAnyRole(role);
+  }
 
   constructor() {
     // Estado inicial, por si ya había una cuenta en caché (localStorage).
@@ -160,15 +176,15 @@ export class AuthService {
         '\n   OID:', account.localAccountId
       );
       this.currentUser.set(null);
-      this.msalService.logout();
+      this.msalService.logoutRedirect().subscribe();
       return;
     }
 
     console.log('✅ [AuthService] Usuario con roles válidos:', roles);
-    this.currentUser.set(this.mapAccountToUser(account));
+    this.currentUser.set(this.mapAccountToUser(account, roles));
   }
 
-  private mapAccountToUser(account: AccountInfo): AppUser {
+  private mapAccountToUser(account: AccountInfo, roles: string[]): AppUser {
     const name = account.name ?? account.username ?? 'Usuario';
     const initials = name
       .split(' ')
@@ -177,11 +193,29 @@ export class AuthService {
       .slice(0, 2)
       .toUpperCase();
 
+    const normalizedRoles = roles
+      .map((r) => r.toUpperCase())
+      .filter((r): r is Role => ['ADMIN', 'TECNICO', 'ESTUDIANTE', 'AUDITOR'].includes(r));
+
     return {
       name,
       email: account.username,
       avatar: initials,
-      role: 'Azure AD',
+      // Rol(es) reales tomados del claim "roles" del id_token de Azure AD
+      // (ver updateUserFromActiveAccount), no un valor fijo.
+      role: normalizedRoles.map(roleLabel).join(' / '),
+      roles: normalizedRoles,
     };
   }
+}
+
+/** Etiqueta legible para cada rol de App Role de Azure AD. */
+function roleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    ADMIN: 'Administrador',
+    TECNICO: 'Técnico',
+    ESTUDIANTE: 'Estudiante',
+    AUDITOR: 'Auditor',
+  };
+  return labels[role.toUpperCase()] ?? role;
 }

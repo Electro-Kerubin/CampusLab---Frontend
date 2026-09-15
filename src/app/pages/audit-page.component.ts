@@ -25,7 +25,7 @@ interface EventCfg {
 const EVENT_CONFIG: Record<EventType, EventCfg> = {
   CREADA: { icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100', text: 'text-yellow-700' },
   APROBADA: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', text: 'text-green-700' },
-  'EN_PREPARACIÓN': { icon: Package, color: 'text-blue-600', bg: 'bg-blue-100', text: 'text-blue-700' },
+  EN_PREPARACION: { icon: Package, color: 'text-blue-600', bg: 'bg-blue-100', text: 'text-blue-700' },
   EN_USO: { icon: UserCheck, color: 'text-cyan-600', bg: 'bg-cyan-100', text: 'text-cyan-700' },
   DEVUELTA: { icon: RotateCcw, color: 'text-gray-600', bg: 'bg-gray-100', text: 'text-gray-600' },
   CANCELADA: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', text: 'text-red-700' },
@@ -35,7 +35,7 @@ const EVENT_CONFIG: Record<EventType, EventCfg> = {
 const EVENT_TYPES: EventType[] = [
   'CREADA',
   'APROBADA',
-  'EN_PREPARACIÓN',
+  'EN_PREPARACION',
   'EN_USO',
   'DEVUELTA',
   'CANCELADA',

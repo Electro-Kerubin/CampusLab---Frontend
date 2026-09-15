@@ -2,10 +2,12 @@
 
 export type PageId = 'dashboard' | 'bookings' | 'catalog' | 'reports' | 'audit';
 
+// Coincide 1:1 con el enum BookingStatus de ms-campuslab-bookings.
+// Ojo: EN_PREPARACION va SIN tilde (así está en el backend).
 export type BookingStatus =
   | 'SOLICITADA'
   | 'APROBADA'
-  | 'EN_PREPARACIÓN'
+  | 'EN_PREPARACION'
   | 'EN_USO'
   | 'DEVUELTA'
   | 'CANCELADA';
@@ -13,7 +15,7 @@ export type BookingStatus =
 export type EventType =
   | 'CREADA'
   | 'APROBADA'
-  | 'EN_PREPARACIÓN'
+  | 'EN_PREPARACION'
   | 'EN_USO'
   | 'DEVUELTA'
   | 'CANCELADA'
@@ -21,51 +23,110 @@ export type EventType =
 
 export type CatalogTab = 'labs' | 'equipment' | 'supplies';
 
+/** Roles de App Role de Azure AD, tal como los valida cada microservicio (@PreAuthorize). */
+export type Role = 'ADMIN' | 'TECNICO' | 'ESTUDIANTE' | 'AUDITOR';
+
 export interface AppUser {
   name: string;
   email: string;
   avatar: string;
-  role: string; // Informativo - proviene del token de Azure AD, no se elige en login
+  role: string; // Etiqueta legible para mostrar en la UI (puede combinar varios roles)
+  /** Roles crudos (en mayúsculas) tal como vienen del claim "roles" del id_token. */
+  roles: Role[];
 }
 
+/**
+ * Refleja BookingResponse de ms-campuslab-bookings (vía ms-campuslab-bff).
+ * startTime/endTime/createdAt/updatedAt llegan como LocalDateTime ISO
+ * (ej: "2026-09-20T09:00:00", sin zona horaria).
+ */
 export interface Booking {
-  id: string;
-  lab: string;
-  equipment: string;
-  requester: string;
-  role: string;
-  date: string;
-  time: string;
+  id: number;
+  resourceId: number;
+  /** Nombre del recurso, agregado por el BFF desde ms-catalog (puede venir null si ese servicio no responde). */
+  resourceNombre: string | null;
+  studentEmail: string;
+  purpose: string;
+  startTime: string;
+  endTime: string;
   status: BookingStatus;
+  createdAt: string;
+  updatedAt: string;
 }
 
+// ─── Catálogo: refleja ms-campuslab-catalog (vía ms-campuslab-bff) ─────────
+
+/** Refleja LabResponseDTO. */
 export interface Lab {
-  id: string;
+  id: number;
   name: string;
-  type: string;
+  location: string | null;
   capacity: number;
-  available: number;
-  total: number;
-  location: string;
-  status: 'Disponible' | 'Ocupado' | 'Parcial' | 'En Mantenimiento';
+  createdAt: string;
 }
 
-export interface Equipment {
-  id: string;
+/** Un "recurso" reservable: SALA, EQUIPO o INSUMO. Es lo que referencia Booking.resourceId. */
+export type ResourceType = 'SALA' | 'EQUIPO' | 'INSUMO';
+export type ResourceStatus = 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'BAJA';
+
+/** Refleja ResourceResponseDTO. */
+export interface CatalogResource {
+  id: number;
+  labId: number;
+  labName: string | null;
+  categoryId: number;
+  categoryName: string | null;
   name: string;
-  lab: string;
-  stock: number;
-  total: number;
-  status: 'Disponible' | 'En Uso' | 'Parcial' | 'Mantenimiento';
+  resourceType: ResourceType;
+  status: ResourceStatus;
+  quantityTotal: number | null;
+  quantityAvailable: number | null;
+  reorderThreshold: number | null;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  unitOfMeasure: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface Supply {
-  id: string;
+/** Refleja CategoryResponseDTO. */
+export interface Category {
+  id: number;
   name: string;
-  unit: string;
-  stock: number;
-  minStock: number;
-  lab: string;
+  description: string | null;
+  createdAt: string;
+}
+
+/** POST/PUT /api/catalog/labs */
+export interface LabRequest {
+  name: string;
+  location?: string;
+  capacity: number;
+}
+
+/** POST /api/catalog/resources */
+export interface CreateResourceRequest {
+  labId: number;
+  categoryId: number;
+  name: string;
+  resourceType: ResourceType;
+  status?: ResourceStatus;
+  quantityTotal?: number;
+  reorderThreshold?: number;
+  unitOfMeasure?: string;
+  equipment?: {
+    brand?: string;
+    model?: string;
+    serialNumber?: string;
+  };
+}
+
+/** PUT /api/catalog/resources/{id}/stock */
+export interface StockAdjustRequest {
+  delta: number;
+  referenceBookingId?: number;
+  note?: string;
 }
 
 export interface AuditEvent {
@@ -83,14 +144,18 @@ export interface AuditEvent {
 
 // ─── Contratos REST con el backend Spring Boot ─────────────────────────
 
-/** POST /api/bookings */
+/**
+ * POST /api/bookings.
+ * studentEmail se omite normalmente: el backend lo completa desde el JWT
+ * del usuario autenticado. Solo tiene sentido enviarlo si un TECNICO/ADMIN
+ * reserva a nombre de otro estudiante.
+ */
 export interface CreateBookingRequest {
-  lab: string;
-  equipment: string;
-  date: string;
-  time: string;
-  purpose?: string;
-  requester?: string;
+  resourceId: number;
+  purpose: string;
+  startTime: string;
+  endTime: string;
+  studentEmail?: string;
 }
 
 /** PUT /api/bookings/{id}/status */
@@ -160,7 +225,7 @@ export interface WorkflowStep {
 export const STATUS_LABELS: Record<BookingStatus, string> = {
   SOLICITADA: 'Solicitada',
   APROBADA: 'Aprobada',
-  'EN_PREPARACIÓN': 'En Preparación',
+  EN_PREPARACION: 'En Preparación',
   EN_USO: 'En Uso',
   DEVUELTA: 'Devuelta',
   CANCELADA: 'Cancelada',
@@ -169,7 +234,7 @@ export const STATUS_LABELS: Record<BookingStatus, string> = {
 export const STATUS_CLASSES: Record<BookingStatus, string> = {
   SOLICITADA: 'status-solicitada',
   APROBADA: 'status-aprobada',
-  'EN_PREPARACIÓN': 'status-en_preparacion',
+  EN_PREPARACION: 'status-en_preparacion',
   EN_USO: 'status-en_uso',
   DEVUELTA: 'status-devuelta',
   CANCELADA: 'status-cancelada',
@@ -178,8 +243,36 @@ export const STATUS_CLASSES: Record<BookingStatus, string> = {
 export const ALL_STATUSES: BookingStatus[] = [
   'SOLICITADA',
   'APROBADA',
-  'EN_PREPARACIÓN',
+  'EN_PREPARACION',
   'EN_USO',
   'DEVUELTA',
   'CANCELADA',
 ];
+
+/**
+ * Máquina de estados real de ms-campuslab-bookings (ver
+ * BookingService.TRANSICIONES_VALIDAS). El frontend la usa para no ofrecer
+ * transiciones que el backend rechazaría con 409/400.
+ */
+export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  SOLICITADA: ['APROBADA', 'CANCELADA'],
+  APROBADA: ['EN_PREPARACION', 'CANCELADA'],
+  EN_PREPARACION: ['EN_USO', 'CANCELADA'],
+  EN_USO: ['DEVUELTA'],
+  DEVUELTA: [],
+  CANCELADA: [],
+};
+
+export const RESOURCE_STATUS_LABELS: Record<ResourceStatus, string> = {
+  DISPONIBLE: 'Disponible',
+  EN_USO: 'En Uso',
+  MANTENIMIENTO: 'Mantenimiento',
+  BAJA: 'De baja',
+};
+
+export const RESOURCE_STATUS_CLASSES: Record<ResourceStatus, string> = {
+  DISPONIBLE: 'bg-green-100 text-green-700',
+  EN_USO: 'bg-blue-100 text-blue-700',
+  MANTENIMIENTO: 'bg-orange-100 text-orange-700',
+  BAJA: 'bg-gray-200 text-gray-600',
+};
