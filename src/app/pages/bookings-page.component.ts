@@ -99,9 +99,15 @@ export class NewReservationModalComponent {
   submitting = signal(false);
   error = signal<string | null>(null);
 
-  canSubmit = computed(
-    () => !!this.resourceId && !!this.date && !!this.startHour && !!this.endHour && !!this.purpose.trim()
-  );
+  // OJO: NO usar computed() acá — computed() solo se recalcula cuando cambia
+  // un signal leído dentro de él, y resourceId/date/purpose son campos
+  // planos ligados con ngModel, no signals. Un computed() nunca los
+  // "vería" cambiar y quedaría cacheado en el valor inicial (false) para
+  // siempre. Un método normal sí se reevalúa en cada ciclo de detección de
+  // cambios, que es lo que necesitamos para un formulario simple como este.
+  canSubmit(): boolean {
+    return !!this.resourceId && !!this.date && !!this.startHour && !!this.endHour && !!this.purpose.trim();
+  }
 
   submit(): void {
     this.error.set(null);
