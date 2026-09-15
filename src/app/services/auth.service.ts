@@ -165,10 +165,10 @@ export class AuthService {
     }
 
     console.log('✅ [AuthService] Usuario con roles válidos:', roles);
-    this.currentUser.set(this.mapAccountToUser(account));
+    this.currentUser.set(this.mapAccountToUser(account, roles));
   }
 
-  private mapAccountToUser(account: AccountInfo): AppUser {
+  private mapAccountToUser(account: AccountInfo, roles: string[]): AppUser {
     const name = account.name ?? account.username ?? 'Usuario';
     const initials = name
       .split(' ')
@@ -181,7 +181,20 @@ export class AuthService {
       name,
       email: account.username,
       avatar: initials,
-      role: 'Azure AD',
+      // Rol(es) reales tomados del claim "roles" del id_token de Azure AD
+      // (ver updateUserFromActiveAccount), no un valor fijo.
+      role: roles.map(roleLabel).join(' / '),
     };
   }
+}
+
+/** Etiqueta legible para cada rol de App Role de Azure AD. */
+function roleLabel(role: string): string {
+  const labels: Record<string, string> = {
+    ADMIN: 'Administrador',
+    TECNICO: 'Técnico',
+    ESTUDIANTE: 'Estudiante',
+    AUDITOR: 'Auditor',
+  };
+  return labels[role.toUpperCase()] ?? role;
 }
