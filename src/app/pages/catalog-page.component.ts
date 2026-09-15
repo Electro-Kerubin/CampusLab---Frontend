@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, Output, EventEmitter } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
+import { AuthService } from '../services/auth.service';
 import {
   CatalogTab,
   ResourceType,
@@ -265,17 +266,24 @@ export class NewResourceModalComponent {
           <h1 class="text-xl font-bold text-gray-900">Catálogo de Recursos</h1>
           <p class="text-sm text-gray-500 mt-0.5">ms-campuslab-catalog · /api/catalog/*</p>
         </div>
-        <button
-          (click)="openCreateModal()"
-          class="flex items-center gap-2 bg-[#5cb85c] hover:bg-[#449d44] text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors shadow-sm"
-        >
-          <lucide-icon [img]="Plus" size="16" /> {{ tab() === 'labs' ? 'Agregar Laboratorio' : 'Agregar Recurso' }}
-        </button>
+        @if (canManageCatalog()) {
+          <button
+            (click)="openCreateModal()"
+            class="flex items-center gap-2 bg-[#5cb85c] hover:bg-[#449d44] text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors shadow-sm"
+          >
+            <lucide-icon [img]="Plus" size="16" /> {{ tab() === 'labs' ? 'Agregar Laboratorio' : 'Agregar Recurso' }}
+          </button>
+        }
       </div>
 
       @if (data.usingFallback()) {
         <div class="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
           ⚠️ No se pudo contactar al backend — mostrando datos de demostración.
+        </div>
+      }
+      @if (!canManageCatalog()) {
+        <div class="mb-4 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          👁️ Tu rol ({{ auth.currentUser()?.role }}) tiene acceso de solo lectura al catálogo.
         </div>
       }
       @if (actionError()) {
@@ -370,7 +378,9 @@ export class NewResourceModalComponent {
                       </span>
                     </td>
                     <td class="px-4 py-3">
-                      <button (click)="promptAdjustStock(eq.id, eq.name)" class="text-xs text-[#5cb85c] hover:text-[#449d44] font-medium">Ajustar stock</button>
+                      @if (canAdjustStock()) {
+                        <button (click)="promptAdjustStock(eq.id, eq.name)" class="text-xs text-[#5cb85c] hover:text-[#449d44] font-medium">Ajustar stock</button>
+                      }
                     </td>
                   </tr>
                 }
@@ -418,7 +428,9 @@ export class NewResourceModalComponent {
                       }
                     </td>
                     <td class="px-4 py-3">
-                      <button (click)="promptAdjustStock(sup.id, sup.name)" class="text-xs text-[#5cb85c] hover:text-[#449d44] font-medium">Ajustar stock</button>
+                      @if (canAdjustStock()) {
+                        <button (click)="promptAdjustStock(sup.id, sup.name)" class="text-xs text-[#5cb85c] hover:text-[#449d44] font-medium">Ajustar stock</button>
+                      }
                     </td>
                   </tr>
                 }
@@ -437,6 +449,7 @@ export class NewResourceModalComponent {
 })
 export class CatalogPageComponent {
   private dataService = inject(DataService);
+  auth = inject(AuthService);
 
   readonly Plus = Plus;
   readonly Search = Search;
@@ -446,6 +459,16 @@ export class CatalogPageComponent {
   readonly Package = Package;
 
   data = this.dataService;
+
+  /** Igual que @PreAuthorize("hasRole('ADMIN')") en el backend (crear/editar labs y recursos). */
+  canManageCatalog(): boolean {
+    return this.auth.hasRole('ADMIN');
+  }
+
+  /** Igual que @PreAuthorize("hasAnyRole('ADMIN','TECNICO')") en el backend (ajustar stock). */
+  canAdjustStock(): boolean {
+    return this.auth.hasAnyRole('ADMIN', 'TECNICO');
+  }
 
   tab = signal<CatalogTab>('labs');
   search = signal('');

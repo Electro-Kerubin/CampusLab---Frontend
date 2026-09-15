@@ -2,6 +2,7 @@ import { Component, inject, signal, computed, Output, EventEmitter } from '@angu
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
+import { AuthService } from '../services/auth.service';
 import {
   Booking,
   BookingStatus,
@@ -224,13 +225,21 @@ export class NewReservationModalComponent {
           <h1 class="text-xl font-bold text-gray-900">Gestión de Reservas</h1>
           <p class="text-sm text-gray-500 mt-0.5">ms-campuslab-bookings · /api/bookings/*</p>
         </div>
-        <button
-          (click)="showModal.set(true)"
-          class="flex items-center gap-2 bg-[#5cb85c] hover:bg-[#449d44] text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors shadow-sm"
-        >
-          <lucide-icon [img]="Plus" size="16" /> Nueva Reserva
-        </button>
+        @if (canCreateBooking()) {
+          <button
+            (click)="showModal.set(true)"
+            class="flex items-center gap-2 bg-[#5cb85c] hover:bg-[#449d44] text-white rounded-lg px-4 py-2 text-sm font-semibold transition-colors shadow-sm"
+          >
+            <lucide-icon [img]="Plus" size="16" /> Nueva Reserva
+          </button>
+        }
       </div>
+
+      @if (!canCreateBooking()) {
+        <div class="mb-4 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          👁️ Tu rol ({{ auth.currentUser()?.role }}) tiene acceso de solo lectura a las reservas.
+        </div>
+      }
 
       @if (data.usingFallback()) {
         <div class="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
@@ -348,21 +357,25 @@ export class NewReservationModalComponent {
               <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">{{ err }}</div>
             }
 
-            <div class="flex gap-2 flex-wrap">
-              @for (s of transitionsFor(sel.status); track s) {
-                <button
-                  (click)="changeStatus(sel.id, s)"
-                  [disabled]="changingStatus()"
-                  class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:opacity-80 disabled:opacity-50"
-                  [class]="statusClass(s)"
-                >
-                  → {{ statusLabel(s) }}
-                </button>
-              }
-              @if (transitionsFor(sel.status).length === 0) {
-                <p class="text-xs text-gray-400">{{ statusLabel(sel.status) }} es un estado final: no admite más transiciones.</p>
-              }
-            </div>
+            @if (canChangeStatus()) {
+              <div class="flex gap-2 flex-wrap">
+                @for (s of transitionsFor(sel.status); track s) {
+                  <button
+                    (click)="changeStatus(sel.id, s)"
+                    [disabled]="changingStatus()"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:opacity-80 disabled:opacity-50"
+                    [class]="statusClass(s)"
+                  >
+                    → {{ statusLabel(s) }}
+                  </button>
+                }
+                @if (transitionsFor(sel.status).length === 0) {
+                  <p class="text-xs text-gray-400">{{ statusLabel(sel.status) }} es un estado final: no admite más transiciones.</p>
+                }
+              </div>
+            } @else {
+              <p class="text-xs text-gray-400">Solo TECNICO o ADMIN pueden cambiar el estado de una reserva.</p>
+            }
           </div>
         }
       </div>
@@ -373,6 +386,7 @@ export class NewReservationModalComponent {
 })
 export class BookingsPageComponent {
   private dataService = inject(DataService);
+  auth = inject(AuthService);
   readonly Plus = Plus;
   readonly Search = Search;
   readonly Filter = Filter;
@@ -380,6 +394,16 @@ export class BookingsPageComponent {
   readonly X = X;
 
   data = this.dataService;
+
+  /** Igual que @PreAuthorize("hasAnyRole('ESTUDIANTE','TECNICO','ADMIN')") en el backend. */
+  canCreateBooking(): boolean {
+    return this.auth.hasAnyRole('ESTUDIANTE', 'TECNICO', 'ADMIN');
+  }
+
+  /** Igual que @PreAuthorize("hasAnyRole('TECNICO','ADMIN')") en el backend. */
+  canChangeStatus(): boolean {
+    return this.auth.hasAnyRole('TECNICO', 'ADMIN');
+  }
 
   search = signal('');
   filterStatus = signal<BookingStatus | 'ALL'>('ALL');

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
+import { landingGuard } from './guards/landing.guard';
 import { MsalGuard } from '@azure/msal-angular';
 
 export const routes: Routes = [
@@ -17,7 +18,10 @@ export const routes: Routes = [
       {
         path: '',
         pathMatch: 'full',
-        redirectTo: 'dashboard',
+        // Landing dinámica: AUDITOR aterriza en /audit, el resto en /dashboard.
+        // canActivate siempre devuelve un UrlTree (redirect), así que esta
+        // ruta nunca llega a necesitar renderizar un componente propio.
+        canActivate: [landingGuard],
       },
       {
         path: 'dashboard',

@@ -23,11 +23,16 @@ export type EventType =
 
 export type CatalogTab = 'labs' | 'equipment' | 'supplies';
 
+/** Roles de App Role de Azure AD, tal como los valida cada microservicio (@PreAuthorize). */
+export type Role = 'ADMIN' | 'TECNICO' | 'ESTUDIANTE' | 'AUDITOR';
+
 export interface AppUser {
   name: string;
   email: string;
   avatar: string;
-  role: string; // Informativo - proviene del token de Azure AD, no se elige en login
+  role: string; // Etiqueta legible para mostrar en la UI (puede combinar varios roles)
+  /** Roles crudos (en mayúsculas) tal como vienen del claim "roles" del id_token. */
+  roles: Role[];
 }
 
 /**
