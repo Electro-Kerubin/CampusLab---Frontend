@@ -49,33 +49,79 @@ export interface Booking {
   updatedAt: string;
 }
 
+// ─── Catálogo: refleja ms-campuslab-catalog (vía ms-campuslab-bff) ─────────
+
+/** Refleja LabResponseDTO. */
 export interface Lab {
-  id: string;
+  id: number;
   name: string;
-  type: string;
+  location: string | null;
   capacity: number;
-  available: number;
-  total: number;
-  location: string;
-  status: 'Disponible' | 'Ocupado' | 'Parcial' | 'En Mantenimiento';
+  createdAt: string;
 }
 
-export interface Equipment {
-  id: string;
+/** Un "recurso" reservable: SALA, EQUIPO o INSUMO. Es lo que referencia Booking.resourceId. */
+export type ResourceType = 'SALA' | 'EQUIPO' | 'INSUMO';
+export type ResourceStatus = 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'BAJA';
+
+/** Refleja ResourceResponseDTO. */
+export interface CatalogResource {
+  id: number;
+  labId: number;
+  labName: string | null;
+  categoryId: number;
+  categoryName: string | null;
   name: string;
-  lab: string;
-  stock: number;
-  total: number;
-  status: 'Disponible' | 'En Uso' | 'Parcial' | 'Mantenimiento';
+  resourceType: ResourceType;
+  status: ResourceStatus;
+  quantityTotal: number | null;
+  quantityAvailable: number | null;
+  reorderThreshold: number | null;
+  brand: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  unitOfMeasure: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface Supply {
-  id: string;
+/** Refleja CategoryResponseDTO. */
+export interface Category {
+  id: number;
   name: string;
-  unit: string;
-  stock: number;
-  minStock: number;
-  lab: string;
+  description: string | null;
+  createdAt: string;
+}
+
+/** POST/PUT /api/catalog/labs */
+export interface LabRequest {
+  name: string;
+  location?: string;
+  capacity: number;
+}
+
+/** POST /api/catalog/resources */
+export interface CreateResourceRequest {
+  labId: number;
+  categoryId: number;
+  name: string;
+  resourceType: ResourceType;
+  status?: ResourceStatus;
+  quantityTotal?: number;
+  reorderThreshold?: number;
+  unitOfMeasure?: string;
+  equipment?: {
+    brand?: string;
+    model?: string;
+    serialNumber?: string;
+  };
+}
+
+/** PUT /api/catalog/resources/{id}/stock */
+export interface StockAdjustRequest {
+  delta: number;
+  referenceBookingId?: number;
+  note?: string;
 }
 
 export interface AuditEvent {
@@ -210,4 +256,18 @@ export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   EN_USO: ['DEVUELTA'],
   DEVUELTA: [],
   CANCELADA: [],
+};
+
+export const RESOURCE_STATUS_LABELS: Record<ResourceStatus, string> = {
+  DISPONIBLE: 'Disponible',
+  EN_USO: 'En Uso',
+  MANTENIMIENTO: 'Mantenimiento',
+  BAJA: 'De baja',
+};
+
+export const RESOURCE_STATUS_CLASSES: Record<ResourceStatus, string> = {
+  DISPONIBLE: 'bg-green-100 text-green-700',
+  EN_USO: 'bg-blue-100 text-blue-700',
+  MANTENIMIENTO: 'bg-orange-100 text-orange-700',
+  BAJA: 'bg-gray-200 text-gray-600',
 };

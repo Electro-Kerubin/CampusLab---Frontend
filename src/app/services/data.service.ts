@@ -5,8 +5,11 @@ import { environment } from '../../environments/environment';
 import {
   Booking,
   Lab,
-  Equipment,
-  Supply,
+  CatalogResource,
+  Category,
+  LabRequest,
+  CreateResourceRequest,
+  StockAdjustRequest,
   AuditEvent,
   CreateBookingRequest,
   UpdateBookingStatusRequest,
@@ -27,7 +30,7 @@ import {
  *
  * Endpoints consumidos:
  *  - ms-campuslab-bookings  → GET/POST /api/bookings · PUT /api/bookings/{id}/status
- *  - ms-campuslab-catalog   → GET /api/catalog/labs|equipment|supplies
+ *  - ms-campuslab-catalog   → GET /api/catalog/labs|resources|categories
  *  - ms-campuslab-audit     → GET /api/audit
  *  - ms-campuslab-report    → GET /api/report/*
  *
@@ -42,8 +45,9 @@ export class DataService {
   // ─── Estado (signals) ─────────────────────────────────────────────────
   readonly bookings = signal<Booking[]>([]);
   readonly labs = signal<Lab[]>([]);
-  readonly equipment = signal<Equipment[]>([]);
-  readonly supplies = signal<Supply[]>([]);
+  /** Todos los recursos (SALA/EQUIPO/INSUMO). equipment()/supplies() abajo se derivan de esto. */
+  readonly resources = signal<CatalogResource[]>([]);
+  readonly categories = signal<Category[]>([]);
   readonly auditEvents = signal<AuditEvent[]>([]);
   readonly usageByHour = signal<UsageByHour[]>([]);
   readonly equipmentStatus = signal<EquipmentStatusSummary[]>([]);
@@ -74,8 +78,8 @@ export class DataService {
     this.loading.set(true);
     this.loadBookings();
     this.loadLabs();
-    this.loadEquipment();
-    this.loadSupplies();
+    this.loadResources();
+    this.loadCategories();
     this.loadAuditEvents();
     this.loadUsageByHour();
     this.loadEquipmentStatus();
@@ -129,19 +133,50 @@ export class DataService {
       .subscribe((data) => this.labs.set(data));
   }
 
-  loadEquipment(): void {
-    this.http
-      .get<Equipment[]>(`${this.api}/catalog/equipment`)
-      .pipe(catchError(() => this.fallback('catalog/equipment', SEED_EQUIPMENT)))
-      .subscribe((data) => this.equipment.set(data));
+  createLab(payload: LabRequest): Observable<Lab> {
+    return this.http
+      .post<Lab>(`${this.api}/catalog/labs`, payload)
+      .pipe(tap((created) => this.labs.update((cur) => [created, ...cur])));
   }
 
-  loadSupplies(): void {
+  /** Todos los recursos, o solo los de un laboratorio si se pasa labId. */
+  loadResources(labId?: number): void {
+    const params = labId ? `?labId=${labId}` : '';
     this.http
-      .get<Supply[]>(`${this.api}/catalog/supplies`)
-      .pipe(catchError(() => this.fallback('catalog/supplies', SEED_SUPPLIES)))
-      .subscribe((data) => this.supplies.set(data));
+      .get<CatalogResource[]>(`${this.api}/catalog/resources${params}`)
+      .pipe(catchError(() => this.fallback('catalog/resources', SEED_RESOURCES)))
+      .subscribe((data) => this.resources.set(data));
   }
+
+  createResource(payload: CreateResourceRequest): Observable<CatalogResource> {
+    return this.http
+      .post<CatalogResource>(`${this.api}/catalog/resources`, payload)
+      .pipe(tap((created) => this.resources.update((cur) => [created, ...cur])));
+  }
+
+  /** Suma/resta stock (delta positivo o negativo) a un recurso. */
+  adjustStock(id: number, payload: StockAdjustRequest): Observable<CatalogResource> {
+    return this.http
+      .put<CatalogResource>(`${this.api}/catalog/resources/${id}/stock`, payload)
+      .pipe(
+        tap((updated) =>
+          this.resources.update((cur) => cur.map((r) => (r.id === id ? updated : r)))
+        )
+      );
+  }
+
+  loadCategories(): void {
+    this.http
+      .get<Category[]>(`${this.api}/catalog/categories`)
+      .pipe(catchError(() => this.fallback('catalog/categories', SEED_CATEGORIES)))
+      .subscribe((data) => this.categories.set(data));
+  }
+
+  /** Recursos de tipo EQUIPO, derivados de resources(). */
+  readonly equipment = computed(() => this.resources().filter((r) => r.resourceType === 'EQUIPO'));
+
+  /** Recursos de tipo INSUMO, derivados de resources(). */
+  readonly supplies = computed(() => this.resources().filter((r) => r.resourceType === 'INSUMO'));
 
   // ─── Audit: ms-campuslab-audit ────────────────────────────────────────
   loadAuditEvents(filters?: { tipo?: string; userId?: string; from?: string; to?: string }): void {
@@ -249,8 +284,8 @@ export class DataService {
   readonly equipmentOccupancy = computed(() => {
     const eq = this.equipment();
     if (eq.length === 0) return { pct: 0, inUse: 0 };
-    const total = eq.reduce((acc, e) => acc + e.total, 0);
-    const used = eq.reduce((acc, e) => acc + (e.total - e.stock), 0);
+    const total = eq.reduce((acc, e) => acc + (e.quantityTotal ?? 0), 0);
+    const used = eq.reduce((acc, e) => acc + ((e.quantityTotal ?? 0) - (e.quantityAvailable ?? 0)), 0);
     return { pct: total > 0 ? Math.round((used / total) * 100) : 0, inUse: used };
   });
 
@@ -277,33 +312,32 @@ const SEED_BOOKINGS: Booking[] = [
   { id: 8, resourceId: 103, resourceNombre: 'Laboratorio A102', studentEmail: 'andres.vega@duocuc.cl', purpose: 'Impresión 3D — pieza de repuesto', startTime: '2026-09-12T16:00:00', endTime: '2026-09-12T18:00:00', status: 'APROBADA', createdAt: '2026-09-11T20:00:00', updatedAt: '2026-09-12T08:00:00' },
 ];
 
+// Mismo shape que LabResponseDTO/ResourceResponseDTO/CategoryResponseDTO de
+// ms-campuslab-catalog.
 const SEED_LABS: Lab[] = [
-  { id: 'A102', name: 'Laboratorio A102', type: 'Impresión 3D', capacity: 15, available: 3, total: 6, location: 'Edificio A, Piso 1', status: 'Disponible' },
-  { id: 'B204', name: 'Laboratorio B204', type: 'Microscopía', capacity: 12, available: 2, total: 8, location: 'Edificio B, Piso 2', status: 'Ocupado' },
-  { id: 'C101', name: 'Sala Cómputo C1', type: 'Computación', capacity: 20, available: 20, total: 20, location: 'Edificio C, Piso 1', status: 'Disponible' },
-  { id: 'C201', name: 'Sala Cómputo C2', type: 'Computación', capacity: 20, available: 15, total: 20, location: 'Edificio C, Piso 2', status: 'Parcial' },
-  { id: 'D301', name: 'Laboratorio D301', type: 'Electrónica', capacity: 18, available: 0, total: 10, location: 'Edificio D, Piso 3', status: 'En Mantenimiento' },
-  { id: 'E105', name: 'Laboratorio E105', type: 'Química', capacity: 16, available: 8, total: 12, location: 'Edificio E, Piso 1', status: 'Disponible' },
+  { id: 1, name: 'Laboratorio A102', location: 'Edificio A, Piso 1', capacity: 15, createdAt: '2026-01-10T08:00:00' },
+  { id: 2, name: 'Laboratorio B204', location: 'Edificio B, Piso 2', capacity: 12, createdAt: '2026-01-10T08:00:00' },
+  { id: 3, name: 'Sala Cómputo C1', location: 'Edificio C, Piso 1', capacity: 20, createdAt: '2026-01-10T08:00:00' },
+  { id: 4, name: 'Laboratorio D301', location: 'Edificio D, Piso 3', capacity: 18, createdAt: '2026-01-10T08:00:00' },
+  { id: 5, name: 'Laboratorio E105', location: 'Edificio E, Piso 1', capacity: 16, createdAt: '2026-01-10T08:00:00' },
 ];
 
-const SEED_EQUIPMENT: Equipment[] = [
-  { id: 'EQ-001', name: 'Impresora 3D Ultimaker S5', lab: 'A102', stock: 2, total: 3, status: 'Disponible' },
-  { id: 'EQ-002', name: 'Impresora 3D Prusa MK4', lab: 'A102', stock: 1, total: 3, status: 'En Uso' },
-  { id: 'EQ-003', name: 'Microscopio Electrónico Zeiss', lab: 'B204', stock: 1, total: 2, status: 'Disponible' },
-  { id: 'EQ-004', name: 'Microscopio Óptico Nikon', lab: 'B204', stock: 3, total: 6, status: 'Disponible' },
-  { id: 'EQ-005', name: 'PC Workstation Dell Precision', lab: 'C101', stock: 14, total: 20, status: 'Parcial' },
-  { id: 'EQ-006', name: 'Osciloscopio Digital Tektronix', lab: 'D301', stock: 0, total: 5, status: 'Mantenimiento' },
-  { id: 'EQ-007', name: 'Kit Arduino Avanzado', lab: 'D301', stock: 8, total: 10, status: 'Disponible' },
-  { id: 'EQ-008', name: 'Espectrómetro UV-Vis', lab: 'E105', stock: 2, total: 4, status: 'Disponible' },
+const SEED_CATEGORIES: Category[] = [
+  { id: 1, name: 'Equipos de laboratorio', description: 'Instrumental y equipos reutilizables asignados a un laboratorio', createdAt: '2026-01-10T08:00:00' },
+  { id: 2, name: 'Insumos consumibles', description: 'Materiales de uso único o recargable (reactivos, guantes, etc.)', createdAt: '2026-01-10T08:00:00' },
+  { id: 3, name: 'Salas', description: 'Espacios físicos reservables dentro de un laboratorio', createdAt: '2026-01-10T08:00:00' },
 ];
 
-const SEED_SUPPLIES: Supply[] = [
-  { id: 'INS-001', name: 'Filamento PLA 1.75mm (blanco)', unit: 'kg', stock: 12, minStock: 5, lab: 'A102' },
-  { id: 'INS-002', name: 'Filamento PETG 1.75mm (negro)', unit: 'kg', stock: 4, minStock: 5, lab: 'A102' },
-  { id: 'INS-003', name: 'Portaobjetos de vidrio (100 uds)', unit: 'caja', stock: 8, minStock: 3, lab: 'B204' },
-  { id: 'INS-004', name: 'Guantes de nitrilo (M)', unit: 'caja', stock: 2, minStock: 5, lab: 'E105' },
-  { id: 'INS-005', name: 'Alcohol isopropílico 1L', unit: 'botella', stock: 6, minStock: 3, lab: 'E105' },
-  { id: 'INS-006', name: 'Cable Dupont 40cm (20uds)', unit: 'set', stock: 15, minStock: 5, lab: 'D301' },
+const SEED_RESOURCES: CatalogResource[] = [
+  { id: 101, labId: 1, labName: 'Laboratorio A102', categoryId: 1, categoryName: 'Equipos de laboratorio', name: 'Impresora 3D Ultimaker S5', resourceType: 'EQUIPO', status: 'DISPONIBLE', quantityTotal: 3, quantityAvailable: 2, reorderThreshold: 1, brand: 'Ultimaker', model: 'S5', serialNumber: 'UM-S5-001', unitOfMeasure: null, createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 102, labId: 1, labName: 'Laboratorio A102', categoryId: 1, categoryName: 'Equipos de laboratorio', name: 'Impresora 3D Prusa MK4', resourceType: 'EQUIPO', status: 'EN_USO', quantityTotal: 3, quantityAvailable: 1, reorderThreshold: 1, brand: 'Prusa', model: 'MK4', serialNumber: 'PR-MK4-002', unitOfMeasure: null, createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 205, labId: 2, labName: 'Laboratorio B204', categoryId: 1, categoryName: 'Equipos de laboratorio', name: 'Microscopio Electrónico Zeiss', resourceType: 'EQUIPO', status: 'DISPONIBLE', quantityTotal: 2, quantityAvailable: 1, reorderThreshold: 1, brand: 'Zeiss', model: null, serialNumber: null, unitOfMeasure: null, createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 301, labId: 3, labName: 'Sala Cómputo C1', categoryId: 1, categoryName: 'Equipos de laboratorio', name: 'PC Workstation Dell Precision', resourceType: 'EQUIPO', status: 'DISPONIBLE', quantityTotal: 20, quantityAvailable: 14, reorderThreshold: 2, brand: 'Dell', model: 'Precision', serialNumber: null, unitOfMeasure: null, createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 401, labId: 4, labName: 'Laboratorio D301', categoryId: 1, categoryName: 'Equipos de laboratorio', name: 'Osciloscopio Digital Tektronix', resourceType: 'EQUIPO', status: 'MANTENIMIENTO', quantityTotal: 5, quantityAvailable: 0, reorderThreshold: 1, brand: 'Tektronix', model: null, serialNumber: null, unitOfMeasure: null, createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 103, labId: 1, labName: 'Laboratorio A102', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Filamento PLA 1.75mm (blanco)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 12, reorderThreshold: 5, brand: null, model: null, serialNumber: null, unitOfMeasure: 'kg', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 104, labId: 1, labName: 'Laboratorio A102', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Filamento PETG 1.75mm (negro)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 4, reorderThreshold: 5, brand: null, model: null, serialNumber: null, unitOfMeasure: 'kg', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 206, labId: 2, labName: 'Laboratorio B204', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Portaobjetos de vidrio (100 uds)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 8, reorderThreshold: 3, brand: null, model: null, serialNumber: null, unitOfMeasure: 'caja', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
+  { id: 501, labId: 5, labName: 'Laboratorio E105', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Guantes de nitrilo (M)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 2, reorderThreshold: 5, brand: null, model: null, serialNumber: null, unitOfMeasure: 'caja', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
 ];
 
 const SEED_AUDIT_EVENTS: AuditEvent[] = [
