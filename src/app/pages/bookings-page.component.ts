@@ -5,6 +5,7 @@ import { DataService } from '../services/data.service';
 import {
   Booking,
   BookingStatus,
+  CatalogResource,
   CreateBookingRequest,
   STATUS_LABELS,
   STATUS_CLASSES,
@@ -39,16 +40,45 @@ import {
               {{ error() }}
             </div>
           }
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1.5">ID del recurso (laboratorio/equipo)</label>
+          <div class="relative">
+            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Recurso (laboratorio, equipo o insumo)</label>
             <input
-              type="number"
-              min="1"
-              [(ngModel)]="resourceId"
-              placeholder="Ej: 101"
+              type="text"
+              [(ngModel)]="resourceSearch"
+              (ngModelChange)="onResourceSearchChange()"
+              (focus)="showResourceList.set(true)"
+              (blur)="onResourceBlur()"
+              placeholder="Buscar por nombre o laboratorio..."
+              autocomplete="off"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-gray-50"
             />
-            <p class="text-[11px] text-gray-400 mt-1">ID del recurso en ms-campuslab-catalog.</p>
+            @if (showResourceList() && filteredResources().length > 0) {
+              <div class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                @for (r of filteredResources(); track r.id) {
+                  <button
+                    type="button"
+                    (mousedown)="selectResource(r)"
+                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center justify-between transition-colors"
+                  >
+                    <span>
+                      <span class="font-medium text-gray-900">{{ r.name }}</span>
+                      <span class="text-[11px] text-gray-400 block">{{ r.labName || ('Lab #' + r.labId) }} · {{ resourceTypeLabel(r.resourceType) }}</span>
+                    </span>
+                    <span class="text-[10px] text-gray-400 font-mono">#{{ r.id }}</span>
+                  </button>
+                }
+              </div>
+            }
+            @if (showResourceList() && resourceSearch.trim() && filteredResources().length === 0) {
+              <div class="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs text-gray-400">
+                No se encontraron recursos que coincidan.
+              </div>
+            }
+            @if (selectedResource(); as sel) {
+              <p class="text-[11px] text-[#5cb85c] mt-1 font-medium">✓ {{ sel.name }} — {{ sel.labName || ('Lab #' + sel.labId) }}</p>
+            } @else {
+              <p class="text-[11px] text-gray-400 mt-1">Busca y selecciona un recurso del catálogo.</p>
+            }
           </div>
           <div class="grid grid-cols-3 gap-3">
             <div>
@@ -86,11 +116,17 @@ import {
   `,
 })
 export class NewReservationModalComponent {
+  private dataService = inject(DataService);
+
   readonly X = X;
   @Output() close = new EventEmitter<void>();
   @Output() saved = new EventEmitter<CreateBookingRequest>();
 
-  resourceId: number | null = null;
+  // ─── Selector de recurso con búsqueda ──────────────────────────────────
+  resourceSearch = '';
+  selectedResource = signal<CatalogResource | null>(null);
+  showResourceList = signal(false);
+
   date = new Date().toISOString().slice(0, 10);
   startHour = '09:00';
   endHour = '11:00';
@@ -99,14 +135,60 @@ export class NewReservationModalComponent {
   submitting = signal(false);
   error = signal<string | null>(null);
 
+  constructor() {
+    // Refresca el catálogo al abrir el modal por si cambió desde el último load.
+    this.dataService.loadResources();
+  }
+
+  // Métodos normales (no computed): ver nota en canSubmit() más abajo — leen
+  // campos planos ligados con ngModel, que un computed() nunca "vería" cambiar.
+  filteredResources(): CatalogResource[] {
+    const term = this.resourceSearch.trim().toLowerCase();
+    const list = this.dataService.resources();
+    const matches = term
+      ? list.filter(
+          (r) =>
+            r.name.toLowerCase().includes(term) ||
+            (r.labName ?? '').toLowerCase().includes(term)
+        )
+      : list;
+    return matches.slice(0, 20);
+  }
+
+  resourceTypeLabel(type: CatalogResource['resourceType']): string {
+    return { SALA: 'Sala', EQUIPO: 'Equipo', INSUMO: 'Insumo' }[type];
+  }
+
+  selectResource(r: CatalogResource): void {
+    this.selectedResource.set(r);
+    this.resourceSearch = r.name;
+    this.showResourceList.set(false);
+  }
+
+  onResourceSearchChange(): void {
+    // Si el usuario sigue tipeando después de haber elegido uno, invalida la
+    // selección para forzar a elegir de nuevo de la lista.
+    const sel = this.selectedResource();
+    if (sel && this.resourceSearch !== sel.name) {
+      this.selectedResource.set(null);
+    }
+    this.showResourceList.set(true);
+  }
+
+  onResourceBlur(): void {
+    // Delay para que el (mousedown) de una opción alcance a dispararse antes
+    // de que el blur oculte la lista (si usáramos (click), el blur del input
+    // ocurre primero y la lista desaparece antes del click).
+    setTimeout(() => this.showResourceList.set(false), 150);
+  }
+
   // OJO: NO usar computed() acá — computed() solo se recalcula cuando cambia
-  // un signal leído dentro de él, y resourceId/date/purpose son campos
-  // planos ligados con ngModel, no signals. Un computed() nunca los
-  // "vería" cambiar y quedaría cacheado en el valor inicial (false) para
-  // siempre. Un método normal sí se reevalúa en cada ciclo de detección de
-  // cambios, que es lo que necesitamos para un formulario simple como este.
+  // un signal leído dentro de él, y date/purpose son campos planos ligados
+  // con ngModel, no signals. Un computed() nunca los "vería" cambiar y
+  // quedaría cacheado en el valor inicial (false) para siempre. Un método
+  // normal sí se reevalúa en cada ciclo de detección de cambios.
   canSubmit(): boolean {
-    return !!this.resourceId && !!this.date && !!this.startHour && !!this.endHour && !!this.purpose.trim();
+    return !!this.selectedResource() && !!this.date && !!this.startHour && !!this.endHour && !!this.purpose.trim();
   }
 
   submit(): void {
@@ -118,7 +200,7 @@ export class NewReservationModalComponent {
     }
 
     this.saved.emit({
-      resourceId: this.resourceId as number,
+      resourceId: this.selectedResource()!.id,
       purpose: this.purpose.trim(),
       startTime: `${this.date}T${this.startHour}:00`,
       endTime: `${this.date}T${this.endHour}:00`,

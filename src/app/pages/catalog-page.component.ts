@@ -141,7 +141,7 @@ export class NewLabModalComponent {
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1.5">{{ resourceType === 'EQUIPO' ? 'Cantidad total' : 'Stock inicial' }}</label>
+              <label class="block text-xs font-semibold text-gray-600 mb-1.5">{{ resourceType === 'EQUIPO' ? 'Cantidad total *' : 'Stock inicial *' }}</label>
               <input type="number" min="0" [(ngModel)]="quantityTotal" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-gray-50" />
             </div>
             <div>
@@ -151,11 +151,16 @@ export class NewLabModalComponent {
           </div>
           @if (resourceType === 'INSUMO') {
             <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1.5">Unidad de medida</label>
+              <label class="block text-xs font-semibold text-gray-600 mb-1.5">Unidad de medida *</label>
               <input type="text" [(ngModel)]="unitOfMeasure" placeholder="Ej: kg, caja, botella" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-gray-50" />
             </div>
           }
           @if (resourceType === 'EQUIPO') {
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1.5">Número de serie *</label>
+              <input type="text" [(ngModel)]="serialNumber" placeholder="Ej: UM-S5-001" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-gray-50" />
+              <p class="text-[11px] text-gray-400 mt-1">Obligatorio y único — así lo exige ms-campuslab-catalog para equipos.</p>
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-semibold text-gray-600 mb-1.5">Marca</label>
@@ -199,6 +204,7 @@ export class NewResourceModalComponent {
   unitOfMeasure = '';
   brand = '';
   model = '';
+  serialNumber = '';
 
   submitting = signal(false);
   error = signal<string | null>(null);
@@ -206,8 +212,16 @@ export class NewResourceModalComponent {
   labs = this.dataService.labs;
   categories = this.dataService.categories;
 
+  // Refleja las validaciones reales de ResourceService en ms-campuslab-catalog:
+  // EQUIPO exige quantityTotal + equipment.serialNumber; INSUMO exige
+  // quantityTotal + unitOfMeasure. Validar acá evita un viaje al backend
+  // solo para recibir un 409 por un campo vacío.
   canSubmit(): boolean {
-    return !!this.name.trim() && this.labId !== null && this.categoryId !== null;
+    if (!this.name.trim() || this.labId === null || this.categoryId === null) return false;
+    if (this.quantityTotal === null || this.quantityTotal < 0) return false;
+    if (this.resourceType === 'EQUIPO') return !!this.serialNumber.trim();
+    if (this.resourceType === 'INSUMO') return !!this.unitOfMeasure.trim();
+    return true;
   }
 
   submit(): void {
@@ -222,7 +236,11 @@ export class NewResourceModalComponent {
       unitOfMeasure: this.resourceType === 'INSUMO' ? this.unitOfMeasure.trim() || undefined : undefined,
       equipment:
         this.resourceType === 'EQUIPO'
-          ? { brand: this.brand.trim() || undefined, model: this.model.trim() || undefined }
+          ? {
+              brand: this.brand.trim() || undefined,
+              model: this.model.trim() || undefined,
+              serialNumber: this.serialNumber.trim(),
+            }
           : undefined,
     });
   }
