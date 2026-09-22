@@ -241,12 +241,6 @@ export class NewReservationModalComponent {
         </div>
       }
 
-      @if (data.usingFallback()) {
-        <div class="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          ⚠️ No se pudo contactar al backend — mostrando datos de demostración.
-        </div>
-      }
-
       <!-- Status filter chips -->
       <div class="flex flex-wrap gap-2 mb-4">
         <button

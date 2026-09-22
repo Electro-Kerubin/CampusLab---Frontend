@@ -15,11 +15,10 @@ import {
   UpdateBookingStatusRequest,
   UsageByHour,
   EquipmentStatusSummary,
-  BookingsByHour,
-  TopResource,
+  BookingHourlyMetric,
+  ResourceUsageMetric,
   StatusDistribution,
-  CycleTimePoint,
-  ReportKpis,
+  STATUS_COLORS,
   WorkflowStep,
   BookingStatus,
   ALL_STATUSES,
@@ -51,16 +50,10 @@ export class DataService {
   readonly auditEvents = signal<AuditEvent[]>([]);
   readonly usageByHour = signal<UsageByHour[]>([]);
   readonly equipmentStatus = signal<EquipmentStatusSummary[]>([]);
-  readonly bookingsByHour = signal<BookingsByHour[]>([]);
-  readonly topResources = signal<TopResource[]>([]);
-  readonly statusDistribution = signal<StatusDistribution[]>([]);
-  readonly cycleTime = signal<CycleTimePoint[]>([]);
-  readonly reportKpis = signal<ReportKpis>({
-    totalReservas: 0,
-    tasaAprobacion: 0,
-    tiempoCicloPromedio: 0,
-    tasaCancelacion: 0,
-  });
+  /** GET /api/report/kpis (ms-campuslab-report) — reservas/hora últimas 24h. Vacío si Kafka no está corriendo. */
+  readonly hourlyMetrics = signal<BookingHourlyMetric[]>([]);
+  /** GET /api/report/top-resources (ms-campuslab-report) — uso de recursos últimos 7 días. */
+  readonly resourceUsage = signal<ResourceUsageMetric[]>([]);
 
   /** True mientras hay peticiones en vuelo */
   readonly loading = signal(false);
@@ -83,11 +76,8 @@ export class DataService {
     this.loadAuditEvents();
     this.loadUsageByHour();
     this.loadEquipmentStatus();
-    this.loadBookingsByHour();
-    this.loadTopResources();
-    this.loadStatusDistribution();
-    this.loadCycleTime();
-    this.loadReportKpis();
+    this.loadHourlyMetrics();
+    this.loadResourceUsage();
   }
 
   /** Refresca solo reservas y auditoría (las más cambiantes). */
@@ -207,40 +197,82 @@ export class DataService {
       .subscribe((data) => this.equipmentStatus.set(data));
   }
 
-  loadBookingsByHour(): void {
+  /**
+   * Reservas por hora (últimas 24h) desde ms-campuslab-report. A diferencia
+   * del resto de las colecciones, acá un array vacío NO cae en datos
+   * semilla: es una respuesta 200 legítima cuando Kafka no está corriendo o
+   * no hubo reservas nuevas — mostrar datos falsos ahí sería engañoso.
+   */
+  loadHourlyMetrics(): void {
     this.http
-      .get<BookingsByHour[]>(`${this.api}/report/bookings-by-hour`)
-      .pipe(catchError(() => this.fallback('report/bookings-by-hour', SEED_BOOKINGS_BY_HOUR)))
-      .subscribe((data) => this.bookingsByHour.set(data));
+      .get<BookingHourlyMetric[]>(`${this.api}/report/kpis`)
+      .pipe(catchError(() => this.fallback('report/kpis', [])))
+      .subscribe((data) => this.hourlyMetrics.set(data));
   }
 
-  loadTopResources(): void {
+  /** Uso de recursos (últimos 7 días) desde ms-campuslab-report. Mismo caso que arriba. */
+  loadResourceUsage(): void {
     this.http
-      .get<TopResource[]>(`${this.api}/report/top-resources`)
-      .pipe(catchError(() => this.fallback('report/top-resources', SEED_TOP_RESOURCES)))
-      .subscribe((data) => this.topResources.set(data));
+      .get<ResourceUsageMetric[]>(`${this.api}/report/top-resources`)
+      .pipe(catchError(() => this.fallback('report/top-resources', [])))
+      .subscribe((data) => this.resourceUsage.set(data));
   }
 
-  loadStatusDistribution(): void {
-    this.http
-      .get<StatusDistribution[]>(`${this.api}/report/status-distribution`)
-      .pipe(catchError(() => this.fallback('report/status-distribution', SEED_STATUS_DISTRIBUTION)))
-      .subscribe((data) => this.statusDistribution.set(data));
-  }
+  /**
+   * "Top recursos" para mostrar en la UI: enriquece resourceUsage() con el
+   * nombre real del recurso (desde el catálogo ya cargado), ordenado de
+   * mayor a menor uso.
+   */
+  readonly topResourcesView = computed(() => {
+    const resourcesById = new Map(this.resources().map((r) => [r.id, r]));
+    return this.resourceUsage()
+      .slice()
+      .sort((a, b) => b.usageCount - a.usageCount)
+      .map((u) => ({
+        name: resourcesById.get(u.resourceId)?.name ?? `Recurso #${u.resourceId}`,
+        usos: u.usageCount,
+      }));
+  });
 
-  loadCycleTime(): void {
-    this.http
-      .get<CycleTimePoint[]>(`${this.api}/report/cycle-time`)
-      .pipe(catchError(() => this.fallback('report/cycle-time', SEED_CYCLE_TIME)))
-      .subscribe((data) => this.cycleTime.set(data));
-  }
+  /**
+   * Distribución de reservas por estado, para el donut de Reportería.
+   * No viene de ms-report: se agrega en el cliente a partir de
+   * dataService.bookings() (datos reales de ms-campuslab-bookings).
+   */
+  readonly statusDistribution = computed<StatusDistribution[]>(() => {
+    const bs = this.bookings();
+    return ALL_STATUSES.map((s) => ({
+      name: s,
+      value: bs.filter((b) => b.status === s).length,
+      color: STATUS_COLORS[s],
+    })).filter((d) => d.value > 0);
+  });
 
-  loadReportKpis(): void {
-    this.http
-      .get<ReportKpis>(`${this.api}/report/kpis`)
-      .pipe(catchError(() => this.fallback('report/kpis', SEED_KPIS)))
-      .subscribe((data) => this.reportKpis.set(data));
-  }
+  /**
+   * KPIs resumen para las 4 tarjetas de Reportería. totalReservas y
+   * tiempoCicloPromedio salen de ms-report (últimas 24h); tasaAprobacion y
+   * tasaCancelacion se calculan sobre TODAS las reservas cargadas de
+   * ms-campuslab-bookings (no hay ese cálculo en ms-report).
+   */
+  readonly reportKpis = computed(() => {
+    const hourly = this.hourlyMetrics();
+    const totalReservas = hourly.reduce((acc, m) => acc + m.bookingsCount, 0);
+    const cycleSamples = hourly.filter((m) => m.avgCycleMinutes != null);
+    const tiempoCicloPromedio = cycleSamples.length
+      ? cycleSamples.reduce((acc, m) => acc + (m.avgCycleMinutes as number), 0) / cycleSamples.length / 60
+      : 0;
+
+    const bs = this.bookings();
+    const aprobadas = bs.filter((b) => b.status !== 'SOLICITADA' && b.status !== 'CANCELADA').length;
+    const canceladas = bs.filter((b) => b.status === 'CANCELADA').length;
+
+    return {
+      totalReservas,
+      tiempoCicloPromedio: Math.round(tiempoCicloPromedio * 10) / 10,
+      tasaAprobacion: bs.length ? Math.round((aprobadas / bs.length) * 100) : 0,
+      tasaCancelacion: bs.length ? Math.round((canceladas / bs.length) * 100) : 0,
+    };
+  });
 
   // ─── Derivados del estado ─────────────────────────────────────────────
   /** Pipeline del flujo de reservas derivado de los estados actuales. */
@@ -374,49 +406,8 @@ const SEED_EQUIPMENT_STATUS: EquipmentStatusSummary[] = [
   { name: 'PCs Alta Gama', ocupado: 75, disponible: 15, mantenimiento: 10 },
 ];
 
-const SEED_BOOKINGS_BY_HOUR: BookingsByHour[] = [
-  { h: '08:00', reservas: 4, canceladas: 0 },
-  { h: '09:00', reservas: 8, canceladas: 1 },
-  { h: '10:00', reservas: 14, canceladas: 0 },
-  { h: '11:00', reservas: 18, canceladas: 2 },
-  { h: '12:00', reservas: 12, canceladas: 1 },
-  { h: '13:00', reservas: 6, canceladas: 0 },
-  { h: '14:00', reservas: 10, canceladas: 0 },
-  { h: '15:00', reservas: 15, canceladas: 1 },
-  { h: '16:00', reservas: 11, canceladas: 0 },
-  { h: '17:00', reservas: 7, canceladas: 0 },
-  { h: '18:00', reservas: 3, canceladas: 0 },
-];
-
-const SEED_TOP_RESOURCES: TopResource[] = [
-  { name: 'PC Workstation Dell', usos: 142 },
-  { name: 'Impresora 3D Ultimaker', usos: 98 },
-  { name: 'Microscopio Zeiss', usos: 87 },
-  { name: 'Osciloscopio Tektronix', usos: 64 },
-  { name: 'Kit Arduino', usos: 58 },
-  { name: 'Microscopio Nikon', usos: 52 },
-  { name: 'Espectrómetro UV', usos: 41 },
-];
-
-const SEED_STATUS_DISTRIBUTION: StatusDistribution[] = [
-  { name: 'Devuelta', value: 280, color: '#9ca3af' },
-  { name: 'En Uso', value: 45, color: '#60a5fa' },
-  { name: 'Aprobada', value: 32, color: '#5cb85c' },
-  { name: 'Solicitada', value: 28, color: '#fbbf24' },
-  { name: 'Cancelada', value: 18, color: '#f87171' },
-];
-
-const SEED_CYCLE_TIME: CycleTimePoint[] = [
-  { semana: 'S1 Sep', ciclo: 4.2 },
-  { semana: 'S2 Sep', ciclo: 3.8 },
-  { semana: 'S3 Sep', ciclo: 5.1 },
-  { semana: 'S4 Sep', ciclo: 4.6 },
-  { semana: 'S1 Oct', ciclo: 3.2 },
-];
-
-const SEED_KPIS: ReportKpis = {
-  totalReservas: 403,
-  tasaAprobacion: 87,
-  tiempoCicloPromedio: 4.2,
-  tasaCancelacion: 4.5,
-};
+// SEED_BOOKINGS_BY_HOUR / SEED_TOP_RESOURCES / SEED_STATUS_DISTRIBUTION /
+// SEED_CYCLE_TIME / SEED_KPIS ya no existen: hourlyMetrics()/resourceUsage()
+// no caen en datos semilla (ver loadHourlyMetrics/loadResourceUsage arriba),
+// y reportKpis()/statusDistribution() son computed derivados de datos reales
+// (bookings() + hourlyMetrics()), no fetches propios.
