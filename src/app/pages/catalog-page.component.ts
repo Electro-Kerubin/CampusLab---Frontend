@@ -276,11 +276,6 @@ export class NewResourceModalComponent {
         }
       </div>
 
-      @if (data.usingFallback()) {
-        <div class="mb-4 text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          ⚠️ No se pudo contactar al backend — mostrando datos de demostración.
-        </div>
-      }
       @if (!canManageCatalog()) {
         <div class="mb-4 text-xs text-blue-700 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
           👁️ Tu rol ({{ auth.currentUser()?.role }}) tiene acceso de solo lectura al catálogo.

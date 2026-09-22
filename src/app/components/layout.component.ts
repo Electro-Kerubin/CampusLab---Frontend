@@ -5,7 +5,6 @@ import { AuthService } from '../services/auth.service';
 import { PageId } from '../models';
 import {
   LucideAngularModule,
-  Settings,
   ChevronDown,
   Search,
   FlaskConical,
@@ -55,11 +54,6 @@ interface NavItem {
 
         <!-- Right side -->
         <div class="flex items-center gap-3">
-          <!-- Settings -->
-          <button class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#2d3045] text-gray-400 hover:text-white transition-colors">
-            <lucide-icon [img]="Settings" size="16" />
-          </button>
-
           <!-- User dropdown -->
           <div class="relative" [class]="menuOpen ? 'z-30' : ''">
             <button
@@ -122,7 +116,6 @@ export class LayoutComponent {
 
   readonly FlaskConical = FlaskConical;
   readonly Search = Search;
-  readonly Settings = Settings;
   readonly ChevronDown = ChevronDown;
 
   user = this.auth.currentUser;
