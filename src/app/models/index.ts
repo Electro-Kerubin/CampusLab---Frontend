@@ -163,7 +163,12 @@ export interface UpdateBookingStatusRequest {
   status: BookingStatus;
 }
 
-/** GET /api/report/usage-by-hour */
+/**
+ * Usados solo en el Dashboard. No reflejan ningún endpoint real — no existe
+ * ms-catalog/ms-report que exponga "impresoras/microscopios/pcs" ni
+ * ocupación por categoría de equipo; el Dashboard los muestra con datos de
+ * demostración a propósito hasta que haya un backend real para esto.
+ */
 export interface UsageByHour {
   h: string;
   impresoras: number;
@@ -172,7 +177,6 @@ export interface UsageByHour {
   labs: number;
 }
 
-/** GET /api/report/equipment-status */
 export interface EquipmentStatusSummary {
   name: string;
   ocupado: number;
@@ -180,38 +184,42 @@ export interface EquipmentStatusSummary {
   mantenimiento: number;
 }
 
-/** GET /api/report/bookings-by-hour */
-export interface BookingsByHour {
-  h: string;
-  reservas: number;
-  canceladas: number;
+/**
+ * Refleja BookingHourlyMetricResponse de ms-campuslab-report
+ * (GET /api/report/kpis?range=last24h, vía el BFF). Se llena consumiendo
+ * eventos Kafka del topic "bookings.events" — viene vacío si Kafka no está
+ * corriendo o no hubo reservas SOLICITADA en las últimas 24h.
+ */
+export interface BookingHourlyMetric {
+  labId: number;
+  bucketHour: string;
+  bookingsCount: number;
+  avgCycleMinutes: number | null;
 }
 
-/** GET /api/report/top-resources */
-export interface TopResource {
-  name: string;
-  usos: number;
+/**
+ * Refleja ResourceUsageMetricResponse de ms-campuslab-report
+ * (GET /api/report/top-resources?range=last7d, vía el BFF). Mismo origen
+ * (eventos Kafka) que BookingHourlyMetric.
+ */
+export interface ResourceUsageMetric {
+  resourceId: number;
+  periodStart: string;
+  periodEnd: string;
+  usageCount: number;
+  totalDurationMinutes: number | null;
 }
 
-/** GET /api/report/status-distribution */
+/**
+ * Fila del donut de "Distribución de Estados". No viene de ningún backend:
+ * se calcula en el cliente agrupando dataService.bookings() por estado
+ * (son datos reales de ms-campuslab-bookings, solo que agregados acá en
+ * vez de en ms-report).
+ */
 export interface StatusDistribution {
   name: string;
   value: number;
   color: string;
-}
-
-/** GET /api/report/cycle-time */
-export interface CycleTimePoint {
-  semana: string;
-  ciclo: number;
-}
-
-/** GET /api/report/kpis */
-export interface ReportKpis {
-  totalReservas: number;
-  tasaAprobacion: number;
-  tiempoCicloPromedio: number;
-  tasaCancelacion: number;
 }
 
 export interface WorkflowStep {
@@ -238,6 +246,16 @@ export const STATUS_CLASSES: Record<BookingStatus, string> = {
   EN_USO: 'status-en_uso',
   DEVUELTA: 'status-devuelta',
   CANCELADA: 'status-cancelada',
+};
+
+/** Mismos estados que STATUS_CLASSES, pero en hex — para charts (Chart.js no acepta clases Tailwind). */
+export const STATUS_COLORS: Record<BookingStatus, string> = {
+  SOLICITADA: '#fbbf24',
+  APROBADA: '#5cb85c',
+  EN_PREPARACION: '#60a5fa',
+  EN_USO: '#38bdf8',
+  DEVUELTA: '#9ca3af',
+  CANCELADA: '#f87171',
 };
 
 export const ALL_STATUSES: BookingStatus[] = [
