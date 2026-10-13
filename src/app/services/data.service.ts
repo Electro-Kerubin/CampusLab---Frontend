@@ -17,6 +17,7 @@ import {
   EquipmentStatusSummary,
   BookingHourlyMetric,
   ResourceUsageMetric,
+  DlqStatus,
   StatusDistribution,
   STATUS_COLORS,
   WorkflowStep,
@@ -32,6 +33,7 @@ import {
  *  - ms-campuslab-catalog   → GET /api/catalog/labs|resources|categories
  *  - ms-campuslab-audit     → GET /api/audit
  *  - ms-campuslab-report    → GET /api/report/*
+ *  - ms-campuslab-notify    → GET /api/notify/dlq (solo TECNICO/ADMIN)
  *
  * Si el backend no responde, cada colección cae automáticamente en datos
  * semilla para permitir el desarrollo del frontend sin backend levantado.
@@ -54,6 +56,8 @@ export class DataService {
   readonly hourlyMetrics = signal<BookingHourlyMetric[]>([]);
   /** GET /api/report/top-resources (ms-campuslab-report) — uso de recursos últimos 7 días. */
   readonly resourceUsage = signal<ResourceUsageMetric[]>([]);
+  /** GET /api/notify/dlq (ms-campuslab-notify) — mensajes fallidos en las DLQ de RabbitMQ. null = el backend no respondió. */
+  readonly dlqStatus = signal<DlqStatus | null>(null);
 
   /** True mientras hay peticiones en vuelo */
   readonly loading = signal(false);
@@ -216,6 +220,19 @@ export class DataService {
       .get<ResourceUsageMetric[]>(`${this.api}/report/top-resources`)
       .pipe(catchError(() => this.fallback('report/top-resources', [])))
       .subscribe((data) => this.resourceUsage.set(data));
+  }
+
+  // ─── Notify: ms-campuslab-notify ──────────────────────────────────────
+  /**
+   * Estado de las DLQ de RabbitMQ. No cae en datos semilla: si el backend no
+   * responde queda en null y la UI lo muestra como "sin datos" (un "todo OK"
+   * inventado ocultaría justamente lo que esta alerta debe avisar).
+   */
+  loadDlqStatus(): void {
+    this.http
+      .get<DlqStatus>(`${this.api}/notify/dlq`)
+      .pipe(catchError(() => of(null)))
+      .subscribe((data) => this.dlqStatus.set(data));
   }
 
   /**
