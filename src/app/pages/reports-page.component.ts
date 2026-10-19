@@ -21,21 +21,11 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Reportería & Analítica</h1>
-          <p class="text-sm text-gray-500 mt-0.5">ms-campuslab-report · Kafka streaming · /api/report/*</p>
         </div>
         <button class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors bg-white">
           <lucide-icon [img]="Download" size="14" /> Exportar
         </button>
       </div>
-
-      @if (hasNoReportData()) {
-        <div class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-          ⚠️ ms-campuslab-report no tiene datos todavía — se llena consumiendo eventos Kafka del topic
-          <code class="font-mono">bookings.events</code>. Si Kafka no está corriendo, o no hubo reservas
-          recientes, esta sección queda vacía (no es un error). "Tasa Aprobación", "Tasa Cancelación" y
-          "Distribución de Estados" sí muestran datos reales porque se calculan directo desde las reservas cargadas.
-        </div>
-      }
 
       <!-- KPI Summary -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -153,10 +143,6 @@ export class ReportsPageComponent {
   readonly lineChartType: ChartType = 'line';
   readonly barChartType: ChartType = 'bar';
   readonly doughnutChartType: ChartType = 'doughnut';
-
-  hasNoReportData = computed(
-    () => this.dataService.hourlyMetrics().length === 0 && this.dataService.resourceUsage().length === 0
-  );
 
   kpis = computed(() => {
     const k = this.dataService.reportKpis();

@@ -72,7 +72,13 @@ export class AuthService {
 
   constructor() {
     // Estado inicial, por si ya había una cuenta en caché (localStorage).
-    this.updateUserFromActiveAccount();
+    // MSAL se inicializa antes de arrancar la app (ver msal-startup.ts), pero este servicio no debe
+    // tumbar la aplicación si algún día se crea antes de tiempo: se actualiza igual al terminar MSAL.
+    try {
+      this.updateUserFromActiveAccount();
+    } catch (error) {
+      console.warn('⚠️ [AuthService] MSAL todavía no está listo; la sesión se leerá al terminar de iniciar:', error);
+    }
 
     // Se refresca cada vez que MSAL termina de procesar login/redirect.
     this.msalBroadcastService.inProgress$

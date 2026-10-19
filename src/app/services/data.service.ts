@@ -50,6 +50,8 @@ export class DataService {
   readonly resources = signal<CatalogResource[]>([]);
   readonly categories = signal<Category[]>([]);
   readonly auditEvents = signal<AuditEvent[]>([]);
+  /** True si el servicio de auditoría no respondió (la página lo avisa en vez de mostrar datos falsos). */
+  readonly auditUnavailable = signal(false);
   readonly usageByHour = signal<UsageByHour[]>([]);
   readonly equipmentStatus = signal<EquipmentStatusSummary[]>([]);
   /** GET /api/report/kpis (ms-campuslab-report) — reservas/hora últimas 24h. Vacío si Kafka no está corriendo. */
@@ -113,9 +115,11 @@ export class DataService {
     return this.http
       .put<Booking>(`${this.api}/bookings/${id}/status`, body)
       .pipe(
-        tap((updated) =>
-          this.bookings.update((cur) => cur.map((b) => (b.id === id ? updated : b)))
-        )
+        tap((updated) => {
+          this.bookings.update((cur) => cur.map((b) => (b.id === id ? updated : b)));
+          // Aprobar / devolver / cancelar mueve el stock de los equipos en el catálogo.
+          this.loadResources();
+        })
       );
   }
 
@@ -180,9 +184,18 @@ export class DataService {
       ) as Record<string, string>
     ).toString();
     const suffix = qs ? `?${qs}` : '';
+    this.auditUnavailable.set(false);
     this.http
       .get<AuditEvent[]>(`${this.api}/audit${suffix}`)
-      .pipe(catchError(() => this.fallback('audit', SEED_AUDIT_EVENTS)))
+      .pipe(
+        // Un registro de auditoría NUNCA se inventa: si el servicio falla se muestra vacío y con aviso,
+        // no con eventos de demostración (a diferencia de reportería o catálogo)
+        catchError((err) => {
+          console.error('[CampusLab] No se pudo cargar la auditoría:', err);
+          this.auditUnavailable.set(true);
+          return of<AuditEvent[]>([]);
+        })
+      )
       .subscribe((data) => this.auditEvents.set(data));
   }
 
@@ -387,19 +400,6 @@ const SEED_RESOURCES: CatalogResource[] = [
   { id: 104, labId: 1, labName: 'Laboratorio A102', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Filamento PETG 1.75mm (negro)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 4, reorderThreshold: 5, brand: null, model: null, serialNumber: null, unitOfMeasure: 'kg', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
   { id: 206, labId: 2, labName: 'Laboratorio B204', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Portaobjetos de vidrio (100 uds)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 8, reorderThreshold: 3, brand: null, model: null, serialNumber: null, unitOfMeasure: 'caja', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
   { id: 501, labId: 5, labName: 'Laboratorio E105', categoryId: 2, categoryName: 'Insumos consumibles', name: 'Guantes de nitrilo (M)', resourceType: 'INSUMO', status: 'DISPONIBLE', quantityTotal: null, quantityAvailable: 2, reorderThreshold: 5, brand: null, model: null, serialNumber: null, unitOfMeasure: 'caja', createdAt: '2026-01-12T09:00:00', updatedAt: '2026-01-12T09:00:00' },
-];
-
-const SEED_AUDIT_EVENTS: AuditEvent[] = [
-  { id: 'EVT-001', reservaId: 'RES-2024-001', tipo: 'CREADA', usuario: 'María González', rol: 'Estudiante', lab: 'Lab A102', timestamp: '2026-09-11 08:30:14', ip: '192.168.1.45', traceId: 'abc-123-def', detalle: 'Reserva creada vía portal web' },
-  { id: 'EVT-002', reservaId: 'RES-2024-001', tipo: 'APROBADA', usuario: 'Rodrigo Muñoz', rol: 'Técnico', lab: 'Lab A102', timestamp: '2026-09-11 08:52:03', ip: '10.0.1.12', traceId: 'abc-124-def', detalle: 'Aprobación manual por técnico de turno' },
-  { id: 'EVT-003', reservaId: 'RES-2024-001', tipo: 'EN_PREPARACION', usuario: 'Rodrigo Muñoz', rol: 'Técnico', lab: 'Lab A102', timestamp: '2026-09-11 09:15:22', ip: '10.0.1.12', traceId: 'abc-125-def', detalle: 'Inicio de preparación de sala y equipos' },
-  { id: 'EVT-004', reservaId: 'RES-2024-002', tipo: 'CREADA', usuario: 'Carlos Ruiz', rol: 'Técnico', lab: 'Lab B204', timestamp: '2026-09-11 09:00:05', ip: '10.0.1.8', traceId: 'bcd-201-efg', detalle: 'Reserva creada por técnico para clase programada' },
-  { id: 'EVT-005', reservaId: 'RES-2024-002', tipo: 'APROBADA', usuario: 'Sistema AD', rol: 'Admin', lab: 'Lab B204', timestamp: '2026-09-11 09:01:00', ip: '10.0.0.1', traceId: 'bcd-202-efg', detalle: 'Aprobación automática (reserva por técnico autorizado)' },
-  { id: 'EVT-006', reservaId: 'RES-2024-003', tipo: 'CREADA', usuario: 'Ana Torres', rol: 'Estudiante', lab: 'Sala C1', timestamp: '2026-09-11 09:45:31', ip: '192.168.2.77', traceId: 'cde-301-fgh', detalle: 'Reserva creada vía app móvil' },
-  { id: 'EVT-007', reservaId: 'RES-2024-004', tipo: 'EN_USO', usuario: 'Pedro Silva', rol: 'Estudiante', lab: 'Lab A102', timestamp: '2026-09-10 10:02:18', ip: '192.168.1.88', traceId: 'def-401-ghi', detalle: 'Equipo recibido y uso iniciado' },
-  { id: 'EVT-008', reservaId: 'RES-2024-005', tipo: 'DEVUELTA', usuario: 'Laura Méndez', rol: 'Técnico', lab: 'Lab D301', timestamp: '2026-09-10 10:05:44', ip: '10.0.1.15', traceId: 'efg-501-hij', detalle: 'Devolución registrada, equipo en buen estado' },
-  { id: 'EVT-009', reservaId: 'RES-2024-006', tipo: 'CANCELADA', usuario: 'Jorge Pinto', rol: 'Estudiante', lab: 'Sala C2', timestamp: '2026-09-09 14:22:09', ip: '192.168.3.12', traceId: 'fgh-601-ijk', detalle: 'Cancelación por el solicitante' },
-  { id: 'EVT-010', reservaId: 'RES-2024-007', tipo: 'CREADA', usuario: 'Sofía Reyes', rol: 'Estudiante', lab: 'Lab B204', timestamp: '2026-09-12 07:58:43', ip: '192.168.1.55', traceId: 'ghi-701-jkl', detalle: 'Reserva programada para el día siguiente' },
 ];
 
 const SEED_USAGE_BY_HOUR: UsageByHour[] = [
