@@ -55,13 +55,27 @@ const EVENT_TYPES: EventType[] = [
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Auditoría y Trazabilidad</h1>
-          <p class="text-sm text-gray-500 mt-0.5">ms-campuslab-audit · Kafka topic: audit.timeline · /api/audit/* (read-only)</p>
         </div>
-        <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
-          <div class="w-2 h-2 rounded-full bg-[#5cb85c] animate-pulse"></div>
-          Escuchando eventos Kafka
-        </div>
+        @if (data.auditUnavailable()) {
+          <div class="flex items-center gap-2 text-xs text-red-700 bg-red-50 px-3 py-2 rounded-lg">
+            <div class="w-2 h-2 rounded-full bg-red-500"></div>
+            Servicio de auditoría no disponible
+          </div>
+        } @else {
+          <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-100 px-3 py-2 rounded-lg">
+            <div class="w-2 h-2 rounded-full bg-[#5cb85c] animate-pulse"></div>
+            Servicio de auditoría conectado
+          </div>
+        }
       </div>
+
+      @if (data.auditUnavailable()) {
+        <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          No se pudo cargar el registro de auditoría. Por seguridad no se muestran datos de demostración:
+          vuelve a intentar con <strong>Filtrar</strong> o revisa que <code>ms-campuslab-audit</code> esté en línea
+          y que tu usuario tenga rol ADMIN o AUDITOR.
+        </div>
+      }
 
       <!-- Filters -->
       <div class="flex flex-wrap gap-3 mb-5">
@@ -84,9 +98,9 @@ const EVENT_TYPES: EventType[] = [
             <option [value]="t">{{ t }}</option>
           }
         </select>
-        <input type="date" value="2026-09-10" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
-        <input type="date" value="2026-09-12" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
-        <button class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors bg-white">
+        <input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" aria-label="Desde" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
+        <input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" aria-label="Hasta" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
+        <button (click)="applyFilters()" class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors bg-white">
           <lucide-icon [img]="Filter" size="14" /> Filtrar
         </button>
       </div>
@@ -176,7 +190,7 @@ const EVENT_TYPES: EventType[] = [
                   </div>
                   <div class="mt-3 flex items-center gap-2">
                     <div class="flex items-center gap-1.5 text-[10px] text-gray-400 bg-white border border-gray-200 px-2 py-1 rounded font-mono">
-                      Kafka · audit.timeline · partition 0
+                      Kafka · bookings.events
                     </div>
                   </div>
                 </div>
@@ -184,12 +198,12 @@ const EVENT_TYPES: EventType[] = [
             </div>
           }
           @if (filtered().length === 0) {
-            <div class="py-12 text-center text-gray-400 text-sm">No hay eventos que coincidan con los filtros</div>
+            <div class="py-12 text-center text-gray-400 text-sm">{{ data.auditEvents().length === 0 ? "Aún no hay eventos de auditoría registrados" : "No hay eventos que coincidan con los filtros" }}</div>
           }
         </div>
       </div>
 
-      <p class="text-xs text-gray-400 mt-3 font-mono">GET /api/audit?userId=...&from=...&to=...&tipo=... · Kafka topic: audit.timeline (compact,delete · 14–30 días)</p>
+      <p class="text-xs text-gray-400 mt-3 font-mono">GET /api/audit?userId=...&from=...&to=...&tipo=... · Kafka topic: bookings.events</p>
     </div>
   `,
 })
@@ -210,6 +224,14 @@ export class AuditPageComponent {
   search = signal('');
   filterType = signal<EventType | 'ALL'>('ALL');
   expanded = signal<string | null>(null);
+  /** Rango de fechas (yyyy-MM-dd) que se consulta al servidor; vacío = sin límite. */
+  from = signal('');
+  to = signal('');
+
+  /** Consulta el rango de fechas al servidor (la búsqueda por texto y el tipo se filtran en pantalla). */
+  applyFilters(): void {
+    this.dataService.loadAuditEvents({ from: this.from(), to: this.to() });
+  }
 
   eventTypes: EventType[] = EVENT_TYPES;
 

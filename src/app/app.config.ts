@@ -8,6 +8,7 @@ import { routes } from './app.routes';
 import { msalGuardConfigFactory } from '../msal-guard-config';
 import { msalInstanceFactory } from '../msal-config';
 import { AuthInterceptor } from './services/auth.interceptor';
+import { provideMsalStartup } from './msal-startup';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,6 +24,8 @@ export const appConfig: ApplicationConfig = {
     provideCharts(withDefaultRegisterables()),
     { provide: MSAL_INSTANCE, useFactory: msalInstanceFactory},
     { provide: MSAL_GUARD_CONFIG, useFactory: msalGuardConfigFactory },
+    // MSAL debe estar inicializado antes de que arranque la app (si no, leer la sesión guardada falla)
+    provideMsalStartup(),
 
     // Registrar interceptor HTTP para agregar token a todas las solicitudes
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },

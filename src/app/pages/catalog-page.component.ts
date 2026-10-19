@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, Output, EventEmitter } from '@angular/core';
+import { Component, inject, signal, computed, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DataService } from '../services/data.service';
@@ -195,7 +195,12 @@ export class NewResourceModalComponent {
   @Output() close = new EventEmitter<void>();
   @Output() saved = new EventEmitter<CreateResourceRequest>();
 
-  resourceType: ResourceType = 'EQUIPO';
+  /**
+   * Tipo de recurso a crear: lo define la pestaña activa del catálogo. Antes estaba fijo en
+   * 'EQUIPO', así que en "Insumos" el formulario mostraba los campos de un equipo y el padre
+   * cambiaba el tipo recién al guardar (sin unitOfMeasure => 409 "Los INSUMOS requieren 'unitOfMeasure'").
+   */
+  @Input() resourceType: ResourceType = 'EQUIPO';
 
   name = '';
   labId: number | null = null;
@@ -257,14 +262,17 @@ export class NewResourceModalComponent {
         <app-new-lab-modal (close)="showLabModal.set(false)" (saved)="onLabSaved($event)" />
       }
       @if (showResourceModal()) {
-        <app-new-resource-modal (close)="showResourceModal.set(false)" (saved)="onResourceSaved($event)" />
+        <app-new-resource-modal
+          [resourceType]="activeResourceType()"
+          (close)="showResourceModal.set(false)"
+          (saved)="onResourceSaved($event)"
+        />
       }
 
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Catálogo de Recursos</h1>
-          <p class="text-sm text-gray-500 mt-0.5">ms-campuslab-catalog · /api/catalog/*</p>
         </div>
         @if (canManageCatalog()) {
           <button
@@ -540,9 +548,14 @@ export class CatalogPageComponent {
     });
   }
 
+  /** Tipo de recurso que se crea según la pestaña activa (equipos o insumos). */
+  activeResourceType(): ResourceType {
+    return TAB_RESOURCE_TYPE[this.tab() as 'equipment' | 'supplies'] ?? 'EQUIPO';
+  }
+
   onResourceSaved(payload: CreateResourceRequest): void {
-    const resourceType = TAB_RESOURCE_TYPE[this.tab() as 'equipment' | 'supplies'] ?? 'EQUIPO';
-    this.dataService.createResource({ ...payload, resourceType }).subscribe({
+    // El tipo ya viene correcto desde el formulario (recibió la pestaña activa): no se reescribe aquí
+    this.dataService.createResource(payload).subscribe({
       next: () => this.showResourceModal.set(false),
       error: (err) => {
         console.error('Error al crear recurso:', err);

@@ -22,17 +22,17 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroying$))
       .subscribe({
         next: (result) => {
-          // Si el redirect fue exitoso y hay cuenta activa, redirige al dashboard
-          console.log('✅ Redirect procesado correctamente:', result);
-          const accounts = this.msalService.instance.getAllAccounts();
-          if (accounts.length > 0) {
-            // Pequeña demora para asegurar que el guard pueda verificar la sesión
-            setTimeout(() => {
-              this.router.navigate(['/dashboard']).catch((err) => {
-                console.error('Error navegando al dashboard:', err);
-              });
-            }, 100);
-          }
+          // En una carga normal (recargar una página, escribir una URL) no hay resultado: la URL no se toca.
+          // Antes aquí se forzaba /dashboard en TODA carga con sesión, así que recargar /audit o /bookings
+          // sacaba al usuario de la página y un AUDITOR terminaba en el dashboard en vez de /audit.
+          if (!result) return;
+
+          // Solo al volver de un login por redirect: ir a "/", que decide según sesión y rol
+          // (authGuard -> /login si falla; landingRedirect -> /dashboard, o /audit para un AUDITOR)
+          console.log('✅ Redirect procesado correctamente:', result.account?.username);
+          this.router.navigateByUrl('/').catch((err) => {
+            console.error('Error navegando tras el login:', err);
+          });
         },
         error: (error) => {
           console.error('❌ Error procesando el retorno de MSAL:', error);

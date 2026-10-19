@@ -223,7 +223,6 @@ export class NewReservationModalComponent {
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Gestión de Reservas</h1>
-          <p class="text-sm text-gray-500 mt-0.5">ms-campuslab-bookings · /api/bookings/*</p>
         </div>
         @if (canCreateBooking()) {
           <button
@@ -299,6 +298,8 @@ export class NewReservationModalComponent {
                 <tr
                   (click)="toggleSelected(b)"
                   class="hover:bg-gray-50 cursor-pointer transition-colors"
+                  [class.bg-blue-50]="selected()?.id === b.id"
+                  [attr.aria-expanded]="selected()?.id === b.id"
                 >
                   <td class="px-4 py-3">
                     <span class="font-mono text-xs text-gray-500">#{{ b.id }}</span>
@@ -320,9 +321,62 @@ export class NewReservationModalComponent {
                     </span>
                   </td>
                   <td class="px-4 py-3">
-                    <lucide-icon [img]="ChevronRight" size="14" class="text-gray-300" />
+                    <lucide-icon
+                      [img]="ChevronRight"
+                      size="14"
+                      class="text-gray-300 inline-block transition-transform"
+                      [class.rotate-90]="selected()?.id === b.id"
+                    />
                   </td>
                 </tr>
+
+                <!-- Detalle: se despliega justo debajo de la reserva seleccionada -->
+                @if (selected(); as sel) {
+                  @if (sel.id === b.id) {
+                    <tr class="detail-row">
+                      <td colspan="7" class="p-0">
+                        <div class="border-t border-gray-200 bg-blue-50/40 p-5">
+                          <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-gray-800 text-sm">Reserva #{{ sel.id }} — Detalle</h4>
+                            <button (click)="selected.set(null)" aria-label="Cerrar detalle" class="text-gray-400 hover:text-gray-600">
+                              <lucide-icon [img]="X" size="14" />
+                            </button>
+                          </div>
+                          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Recurso</p><p class="text-sm font-medium text-gray-800">{{ sel.resourceNombre || ('Recurso #' + sel.resourceId) }}</p></div>
+                            <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Solicitante</p><p class="text-sm font-medium text-gray-800">{{ sel.studentEmail }}</p></div>
+                            <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Propósito</p><p class="text-sm font-medium text-gray-800">{{ sel.purpose }}</p></div>
+                            <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Horario</p><p class="text-sm font-medium text-gray-800">{{ sel.startTime | date: 'dd-MM-yyyy HH:mm' }} – {{ sel.endTime | date: 'HH:mm' }}</p></div>
+                          </div>
+
+                          @if (statusError(); as err) {
+                            <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">{{ err }}</div>
+                          }
+
+                          @if (canChangeStatus()) {
+                            <div class="flex gap-2 flex-wrap">
+                              @for (s of transitionsFor(sel.status); track s) {
+                                <button
+                                  (click)="changeStatus(sel.id, s)"
+                                  [disabled]="changingStatus()"
+                                  class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:opacity-80 disabled:opacity-50"
+                                  [class]="statusClass(s)"
+                                >
+                                  → {{ statusLabel(s) }}
+                                </button>
+                              }
+                              @if (transitionsFor(sel.status).length === 0) {
+                                <p class="text-xs text-gray-400">{{ statusLabel(sel.status) }} es un estado final: no admite más transiciones.</p>
+                              }
+                            </div>
+                          } @else {
+                            <p class="text-xs text-gray-400">Solo TECNICO o ADMIN pueden cambiar el estado de una reserva.</p>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
               }
             </tbody>
           </table>
@@ -330,48 +384,6 @@ export class NewReservationModalComponent {
             <div class="py-12 text-center text-gray-400 text-sm">No hay reservas que coincidan con los filtros</div>
           }
         </div>
-
-        <!-- Detail panel -->
-        @if (selected(); as sel) {
-          <div class="border-t border-gray-200 bg-blue-50/40 p-5">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="font-semibold text-gray-800 text-sm">Reserva #{{ sel.id }} — Detalle</h4>
-              <button (click)="selected.set(null)" class="text-gray-400 hover:text-gray-600">
-                <lucide-icon [img]="X" size="14" />
-              </button>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Recurso</p><p class="text-sm font-medium text-gray-800">{{ sel.resourceNombre || ('Recurso #' + sel.resourceId) }}</p></div>
-              <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Solicitante</p><p class="text-sm font-medium text-gray-800">{{ sel.studentEmail }}</p></div>
-              <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Propósito</p><p class="text-sm font-medium text-gray-800">{{ sel.purpose }}</p></div>
-              <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Horario</p><p class="text-sm font-medium text-gray-800">{{ sel.startTime | date: 'dd-MM-yyyy HH:mm' }} – {{ sel.endTime | date: 'HH:mm' }}</p></div>
-            </div>
-
-            @if (statusError(); as err) {
-              <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 mb-3">{{ err }}</div>
-            }
-
-            @if (canChangeStatus()) {
-              <div class="flex gap-2 flex-wrap">
-                @for (s of transitionsFor(sel.status); track s) {
-                  <button
-                    (click)="changeStatus(sel.id, s)"
-                    [disabled]="changingStatus()"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all hover:opacity-80 disabled:opacity-50"
-                    [class]="statusClass(s)"
-                  >
-                    → {{ statusLabel(s) }}
-                  </button>
-                }
-                @if (transitionsFor(sel.status).length === 0) {
-                  <p class="text-xs text-gray-400">{{ statusLabel(sel.status) }} es un estado final: no admite más transiciones.</p>
-                }
-              </div>
-            } @else {
-              <p class="text-xs text-gray-400">Solo TECNICO o ADMIN pueden cambiar el estado de una reserva.</p>
-            }
-          </div>
-        }
       </div>
 
       <p class="text-xs text-gray-400 mt-3 font-mono">POST /api/bookings · GET /api/bookings?status=&amp;from=&amp;to= · PUT /api/bookings/&#123;id&#125;/status</p>

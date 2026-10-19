@@ -211,6 +211,29 @@ export interface ResourceUsageMetric {
 }
 
 /**
+ * Refleja DlqStatusDTO de ms-campuslab-notify (GET /api/notify/dlq, vía el BFF).
+ * "UNAVAILABLE" lo agrega el BFF cuando ms-notify o RabbitMQ no responden.
+ */
+export type DlqHealth = 'OK' | 'ALERT' | 'UNAVAILABLE';
+
+export interface DlqQueueStatus {
+  label: string;
+  queue: string;
+  dlq: string;
+  /** Mensajes esperando en la cola principal. */
+  pending: number;
+  /** Mensajes en la DLQ (fallaron tras los reintentos o expiraron sin procesarse). */
+  failed: number;
+}
+
+export interface DlqStatus {
+  status: DlqHealth;
+  totalInDlq: number;
+  queues: DlqQueueStatus[];
+  checkedAt: string;
+}
+
+/**
  * Fila del donut de "Distribución de Estados". No viene de ningún backend:
  * se calcula en el cliente agrupando dataService.bookings() por estado
  * (son datos reales de ms-campuslab-bookings, solo que agregados acá en

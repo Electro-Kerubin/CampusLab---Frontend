@@ -1,28 +1,20 @@
-import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
-import { MsalGuard } from '@azure/msal-angular';
-import { AuthService } from './services/auth.service';
+import { guestGuard, landingRedirect } from './guards/landing';
 
 /**
- * Landing dinámica: AUDITOR aterriza en /audit, el resto en /dashboard.
+ * Qué pasa al abrir la aplicación:
  *
- * OJO: una ruta SIEMPRE necesita uno de component/loadComponent/redirectTo/
- * children/loadChildren — un canActivate solo, aunque siempre redirija, no
- * pasa la validación estática del Router (NG04014: "Invalid configuration
- * of route ''"). Por eso esto usa la forma funcional de `redirectTo`
- * (soportada desde Angular 15.1), no un guard.
+ *   /            sin sesión -> /login          con sesión -> /dashboard (un AUDITOR -> /audit)
+ *   /login       sin sesión -> muestra el login   con sesión -> su pantalla de inicio (guestGuard)
+ *   /cualquier   sin sesión -> /login          con sesión -> se queda ahí (rutas internas) o va a "/"
+ *
+ * La lógica de aterrizaje vive en guards/landing.ts.
  */
-function landingRedirect(): string {
-  const auth = inject(AuthService);
-  const roles = auth.currentUser()?.roles ?? [];
-  const isAuditorOnly = roles.length > 0 && roles.every((r) => r === 'AUDITOR');
-  return isAuditorOnly ? '/audit' : '/dashboard';
-}
-
 export const routes: Routes = [
   {
     path: 'login',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./pages/login-page.component').then((m) => m.LoginPageComponent),
   },
