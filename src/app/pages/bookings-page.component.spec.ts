@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../services/auth.service';
 import { Booking } from '../models';
@@ -30,6 +31,8 @@ describe('BookingsPageComponent: detalle de una reserva', () => {
     TestBed.configureTestingModule({
       imports: [BookingsPageComponent],
       providers: [
+        // El componente inyecta ActivatedRoute (pre-carga del filtro ?q del buscador global)
+        provideRouter([]),
         {
           provide: DataService,
           useValue: {
