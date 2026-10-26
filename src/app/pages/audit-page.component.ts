@@ -8,7 +8,6 @@ import {
   LucideAngularModule,
   Search,
   Filter,
-  ChevronDown,
   CheckCircle,
   Clock,
   UserCheck,
@@ -90,20 +89,16 @@ const EVENT_TYPES: EventType[] = [
             class="w-full border border-gray-200 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
           />
         </div>
-        <div class="relative">
-          <select
-            [ngModel]="filterType()"
-            (ngModelChange)="onTypeChange($event)"
-            style="-webkit-appearance: none; -moz-appearance: none; appearance: none;"
-            class="select-clean appearance-none border border-gray-200 rounded-lg pl-3 pr-9 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600 cursor-pointer"
-          >
-            <option value="ALL">Todos los eventos</option>
-            @for (t of eventTypes; track t) {
-              <option [value]="t">{{ t }}</option>
-            }
-          </select>
-          <lucide-icon [img]="ChevronDown" size="14" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        </div>
+        <select
+          [ngModel]="filterType()"
+          (ngModelChange)="onTypeChange($event)"
+          class="border border-gray-200 rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600 cursor-pointer"
+        >
+          <option value="ALL">Todos los eventos</option>
+          @for (t of eventTypes; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
         <div class="flex flex-col gap-1">
           <label class="text-[11px] font-semibold text-gray-500">Fecha de inicio</label>
           <input type="date" [ngModel]="from()" (ngModelChange)="onFromDate($event)" [attr.max]="to() || todayISO" aria-label="Fecha de inicio" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
@@ -227,7 +222,6 @@ export class AuditPageComponent {
 
   readonly Search = Search;
   readonly Filter = Filter;
-  readonly ChevronDown = ChevronDown;
   readonly CheckCircle = CheckCircle;
   readonly Clock = Clock;
   readonly UserCheck = UserCheck;
