@@ -28,7 +28,7 @@ import {
     LucideAngularModule,
   ],
   template: `
-    <div class="p-8 space-y-6">
+    <div class="p-4 sm:p-8 space-y-6">
       <!-- Header row -->
       <div class="flex items-center justify-between">
         <div>
@@ -401,4 +401,5 @@ export class DashboardPageComponent {
     this.router.navigate(['/bookings']);
   }
 }
+
 

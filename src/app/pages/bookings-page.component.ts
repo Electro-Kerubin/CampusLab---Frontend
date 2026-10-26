@@ -36,7 +36,7 @@ import {
             <lucide-icon [img]="X" size="18" />
           </button>
         </div>
-        <div class="p-8 space-y-6">
+        <div class="p-4 sm:p-8 space-y-6">
           @if (error()) {
             <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
               {{ error() }}
@@ -215,7 +215,7 @@ export class NewReservationModalComponent {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, NewReservationModalComponent],
   template: `
-    <div class="p-8">
+    <div class="p-4 sm:p-8">
       @if (showModal()) {
         <app-new-reservation-modal (close)="showModal.set(false)" (saved)="onSaved($event)" />
       }
@@ -493,5 +493,6 @@ export class BookingsPageComponent {
     });
   }
 }
+
 
 

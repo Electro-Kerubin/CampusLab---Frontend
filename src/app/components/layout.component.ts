@@ -41,8 +41,8 @@ interface NavItem {
           <span class="font-semibold tracking-tight">CampusLab</span>
         </a>
 
-        <!-- Search -->
-        <div class="flex-1 max-w-md mx-4">
+        <!-- Search (oculto en móviles: el header prioriza logo y usuario) -->
+        <div class="flex-1 max-w-md mx-4 hidden sm:block">
           <div class="relative">
             <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
             <input
@@ -154,7 +154,7 @@ interface NavItem {
 
       <!-- Horizontal Nav Bar -->
       <nav class="bg-[#212330] border-b border-[#2d3045] shrink-0 z-10">
-        <div class="flex items-stretch px-4 h-11 gap-1">
+        <div class="flex items-stretch px-2 sm:px-4 h-11 gap-1 overflow-x-auto">
           @for (item of navItems; track item.id) {
             <a
               [routerLink]="item.path"

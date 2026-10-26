@@ -43,7 +43,7 @@ const TAB_RESOURCE_TYPE: Record<Exclude<CatalogTab, 'labs'>, ResourceType> = {
             <lucide-icon [img]="X" size="18" />
           </button>
         </div>
-        <div class="p-8 space-y-6">
+        <div class="p-4 sm:p-8 space-y-6">
           @if (error()) {
             <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{{ error() }}</div>
           }
@@ -115,7 +115,7 @@ export class NewLabModalComponent {
             <lucide-icon [img]="X" size="18" />
           </button>
         </div>
-        <div class="p-8 space-y-6">
+        <div class="p-4 sm:p-8 space-y-6">
           @if (error()) {
             <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{{ error() }}</div>
           }
@@ -258,7 +258,7 @@ export class NewResourceModalComponent {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, NewLabModalComponent, NewResourceModalComponent],
   template: `
-    <div class="p-8">
+    <div class="p-4 sm:p-8">
       @if (showLabModal()) {
         <app-new-lab-modal (close)="showLabModal.set(false)" (saved)="onLabSaved($event)" />
       }
@@ -589,4 +589,5 @@ export class CatalogPageComponent {
     });
   }
 }
+
 

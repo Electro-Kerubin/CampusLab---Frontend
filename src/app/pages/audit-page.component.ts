@@ -52,7 +52,7 @@ const EVENT_TYPES: EventType[] = [
     LucideAngularModule,
   ],
   template: `
-    <div class="p-8">
+    <div class="p-4 sm:p-8">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
@@ -322,5 +322,6 @@ export class AuditPageComponent {
     }
   }
 }
+
 
 

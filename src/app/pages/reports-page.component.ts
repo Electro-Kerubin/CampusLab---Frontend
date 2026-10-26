@@ -16,7 +16,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
   standalone: true,
   imports: [CommonModule, BaseChartDirective, LucideAngularModule],
   template: `
-    <div class="p-8 space-y-6">
+    <div class="p-4 sm:p-8 space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -264,5 +264,6 @@ export class ReportsPageComponent {
     return `hsl(${132 - i * 12}, 55%, ${55 - i * 3}%)`;
   }
 }
+
 
 
