@@ -16,7 +16,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
   standalone: true,
   imports: [CommonModule, BaseChartDirective, LucideAngularModule],
   template: `
-    <div class="p-6 space-y-6">
+    <div class="p-8 space-y-6">
       <!-- Header -->
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -28,7 +28,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
       </div>
 
       <!-- KPI Summary -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
         @for (k of kpis(); track k.label) {
           <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
             <div class="flex items-center justify-between mb-3">
@@ -43,9 +43,9 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
       </div>
 
       <!-- Charts grid -->
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <!-- Reservas por hora -->
-        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Reservas por Hora (últimas 24h)</h3>
           @if (data.hourlyMetrics().length === 0) {
             <div class="h-[200px] flex items-center justify-center text-xs text-gray-400">Sin datos en las últimas 24h</div>
@@ -57,7 +57,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         </div>
 
         <!-- Tiempo de ciclo -->
-        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-gray-900 text-sm">Tiempo de Ciclo (minutos, por hora)</h3>
             <span class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded font-mono">SOLICITADA → DEVUELTA</span>
@@ -73,9 +73,9 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
       </div>
 
       <!-- Bottom row -->
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <!-- Top recursos -->
-        <div class="xl:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="xl:col-span-2 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Recursos Más Usados (últimos 7 días)</h3>
           @if (data.topResourcesView().length === 0) {
             <p class="text-xs text-gray-400">Sin datos en los últimos 7 días</p>
@@ -103,7 +103,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         </div>
 
         <!-- Distribución estados -->
-        <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Distribución de Estados</h3>
           @if (data.statusDistribution().length === 0) {
             <p class="text-xs text-gray-400">Sin reservas cargadas todavía</p>
@@ -126,7 +126,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         </div>
       </div>
 
-      <p class="text-xs text-gray-400 font-mono">GET /api/report/kpis?range=last24h · GET /api/report/top-resources?range=last7d · Kafka topic: bookings.events</p>
+      <p class="text-xs text-gray-400">Métricas calculadas en tiempo real a partir de la actividad de reservas de los últimos días.</p>
     </div>
   `,
 })
@@ -147,7 +147,7 @@ export class ReportsPageComponent {
   kpis = computed(() => {
     const k = this.dataService.reportKpis();
     return [
-      { label: 'Reservas (24h, ms-report)', value: `${k.totalReservas}`, icon: Activity, color: 'bg-green-50 text-[#5cb85c]' },
+      { label: 'Reservas (24h)', value: `${k.totalReservas}`, icon: Activity, color: 'bg-green-50 text-[#5cb85c]' },
       { label: 'Tasa Aprobación (todas)', value: `${k.tasaAprobacion}%`, icon: TrendingUp, color: 'bg-blue-50 text-blue-600' },
       { label: 'Tiempo de Ciclo Prom. (24h)', value: `${k.tiempoCicloPromedio}h`, icon: Clock, color: 'bg-yellow-50 text-yellow-600' },
       { label: 'Tasa Cancelación (todas)', value: `${k.tasaCancelacion}%`, icon: Activity, color: 'bg-purple-50 text-purple-600' },
@@ -264,3 +264,5 @@ export class ReportsPageComponent {
     return `hsl(${132 - i * 12}, 55%, ${55 - i * 3}%)`;
   }
 }
+
+

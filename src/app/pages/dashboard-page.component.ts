@@ -1,16 +1,13 @@
 import { Component, inject, computed } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { timer } from 'rxjs';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../services/auth.service';
 import {
   LucideAngularModule,
   TrendingUp,
   AlertCircle,
-  TriangleAlert,
-  CircleCheck,
+  Settings,
   MoreHorizontal,
   RefreshCw,
   Plus,
@@ -31,7 +28,7 @@ import {
     LucideAngularModule,
   ],
   template: `
-    <div class="p-6 space-y-6">
+    <div class="p-8 space-y-6">
       <!-- Header row -->
       <div class="flex items-center justify-between">
         <div>
@@ -48,9 +45,9 @@ import {
       </div>
 
       <!-- KPI Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Reservas Activas -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-start justify-between mb-3">
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Reservas Activas</p>
@@ -67,7 +64,7 @@ import {
         </div>
 
         <!-- Ocupación -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-start justify-between mb-2">
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ocupación de Equipos</p>
@@ -90,7 +87,7 @@ import {
         </div>
 
         <!-- Aprobaciones pendientes -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-start justify-between mb-3">
             <div>
               <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Aprobaciones Pendientes</p>
@@ -105,9 +102,9 @@ import {
       </div>
 
       <!-- Middle row -->
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <!-- Workflow pipeline -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="font-semibold text-gray-900 text-sm">Reservas: Estado y Flujo</h3>
@@ -148,7 +145,7 @@ import {
         </div>
 
         <!-- Lab usage line chart -->
-        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="font-semibold text-gray-900 text-sm">Uso de Laboratorios (Hoy)</h3>
@@ -169,7 +166,7 @@ import {
       </div>
 
       <!-- Bottom row: Equipment status bar chart -->
-      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
             <h3 class="font-semibold text-gray-900 text-sm">Estado de Equipos — Tiempo Real</h3>
@@ -195,78 +192,39 @@ import {
         </div>
       </div>
 
-      <!-- Alertas de mensajería (DLQ de RabbitMQ) — solo Técnico y Admin -->
+      <!-- Mensajería: funcionalidad aún no implementada -->
       @if (canSeeDlq()) {
-        <div class="bg-white rounded-xl border p-5 shadow-sm" [class]="dlqCardCss()">
+        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
             <div>
-              <h3 class="font-semibold text-gray-900 text-sm">Mensajería · Mensajes Fallidos (DLQ)</h3>
-              <p class="text-xs text-gray-400 mt-0.5">RabbitMQ · se actualiza cada 10 s</p>
+              <h3 class="font-semibold text-gray-900 text-sm">Mensajería · Mensajes Fallidos</h3>
             </div>
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full" [class]="dlqBadgeCss()">
-              {{ dlqBadgeLabel() }}
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700">
+              En mantención
             </span>
           </div>
 
-          @if (dlq()?.status === 'ALERT') {
-            <div role="alert" class="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 text-xs">
-              <lucide-icon [img]="TriangleAlert" size="16" class="shrink-0 mt-0.5" />
-              <span>
-                Hay {{ dlq()!.totalInDlq }} mensaje(s) en cuarentena: fallaron tras los reintentos o
-                expiraron sin procesarse. Se conservan 24 h en la DLQ para analizarlos en RabbitMQ.
-              </span>
-            </div>
-          }
-
-          @if (dlq(); as d) {
-            @if (d.status !== 'UNAVAILABLE') {
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                @for (q of d.queues; track q.queue) {
-                  <div class="border rounded-lg p-3" [class]="q.failed > 0 ? 'border-red-200 bg-red-50' : 'border-gray-100 bg-gray-50'">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-xs font-semibold text-gray-700">{{ q.label }}</span>
-                      @if (q.failed > 0) {
-                        <lucide-icon [img]="TriangleAlert" size="14" class="text-red-500" />
-                      } @else {
-                        <lucide-icon [img]="CircleCheck" size="14" class="text-[#5cb85c]" />
-                      }
-                    </div>
-                    <div class="flex items-end justify-between">
-                      <div>
-                        <p class="text-2xl font-bold" [class]="q.failed > 0 ? 'text-red-600' : 'text-gray-900'">{{ q.failed }}</p>
-                        <p class="text-[10px] text-gray-400">en DLQ</p>
-                      </div>
-                      <div class="text-right">
-                        <p class="text-sm font-semibold text-gray-600">{{ q.pending }}</p>
-                        <p class="text-[10px] text-gray-400">pendientes</p>
-                      </div>
-                    </div>
-                    <p class="text-[10px] text-gray-400 font-mono mt-2 truncate">{{ q.dlq }}</p>
-                  </div>
-                }
-              </div>
-            } @else {
-              <p class="text-xs text-gray-400">No se pudo consultar RabbitMQ: ms-notify no responde.</p>
-            }
-          } @else {
-            <p class="text-xs text-gray-400">Sin conexión con el backend.</p>
-          }
+          <div class="flex flex-col items-center justify-center py-8 gap-3 text-gray-400">
+            <lucide-icon [img]="Settings" size="36" class="animate-spin" style="animation-duration: 40s" />
+            <p class="text-sm font-medium text-gray-500">En mantención</p>
+            <p class="text-xs text-gray-400">Funcionalidad en desarrollo</p>
+          </div>
         </div>
       }
 
       <!-- Microservices status row -->
-      <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <h3 class="font-semibold text-gray-900 text-sm mb-4">Estado de Microservicios</h3>
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          @for (svc of microservices; track svc.name) {
-            <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
-              <div class="flex items-center gap-1.5 mb-1">
-                <div class="w-2 h-2 rounded-full animate-pulse"
-                     [class]="svc.status === 'up' ? 'bg-[#5cb85c]' : 'bg-yellow-400'"></div>
-                <span class="text-xs font-semibold text-gray-700">{{ svc.name }}</span>
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h3 class="font-semibold text-gray-900 text-sm mb-4">Estado de los servicios</h3>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            @for (svc of microservices; track svc.name) {
+              <div class="border border-gray-100 rounded-lg p-3 bg-gray-50">
+                <div class="flex items-center gap-1.5 mb-1">
+                  <div class="w-2 h-2 rounded-full animate-pulse"
+                       [class]="svc.status === 'up' ? 'bg-[#5cb85c]' : 'bg-yellow-400'"></div>
+                  <span class="text-xs font-semibold text-gray-700">{{ svc.name }}</span>
+                </div>
+                <p class="text-[10px] text-gray-400 leading-tight">{{ svc.port }}</p>
               </div>
-              <p class="text-[10px] text-gray-400 font-mono leading-tight">{{ svc.port }}</p>
-            </div>
           }
         </div>
       </div>
@@ -280,26 +238,16 @@ export class DashboardPageComponent {
 
   readonly TrendingUp = TrendingUp;
   readonly AlertCircle = AlertCircle;
-  readonly TriangleAlert = TriangleAlert;
-  readonly CircleCheck = CircleCheck;
+  readonly Settings = Settings;
   readonly MoreHorizontal = MoreHorizontal;
   readonly RefreshCw = RefreshCw;
   readonly Plus = Plus;
 
   data = this.dataService;
 
-  // Alertas de DLQ: el endpoint del BFF es solo para TECNICO/ADMIN
+  // Alertas de mensajería: el endpoint del BFF es solo para TECNICO/ADMIN.
+  // La sección está "En mantención" (aún no implementada): sin polling mientras tanto.
   readonly canSeeDlq = computed(() => this.auth.hasAnyRole('ADMIN', 'TECNICO'));
-  readonly dlq = this.dataService.dlqStatus;
-
-  constructor() {
-    // Mientras el dashboard está abierto, se consulta el estado de las DLQ cada 10 s
-    timer(0, 10_000)
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => {
-        if (this.canSeeDlq()) this.dataService.loadDlqStatus();
-      });
-  }
 
   // Circle progress
   readonly circleCirc = 2 * Math.PI * 36;
@@ -422,11 +370,11 @@ export class DashboardPageComponent {
   };
 
   microservices = [
-    { name: 'ms-bookings', port: '/api/bookings/*', status: 'up' },
-    { name: 'ms-catalog', port: '/api/catalog/*', status: 'up' },
-    { name: 'ms-notify', port: 'RabbitMQ consumer', status: 'up' },
-    { name: 'ms-audit', port: '/api/audit/*', status: 'up' },
-    { name: 'ms-report', port: '/api/report/*', status: 'warning' },
+    { name: 'Reservas', port: 'Operativo', status: 'up' },
+    { name: 'Catálogo', port: 'Operativo', status: 'up' },
+    { name: 'Notificaciones', port: 'Operativo', status: 'up' },
+    { name: 'Auditoría', port: 'Operativo', status: 'up' },
+    { name: 'Reportería', port: 'Con observaciones', status: 'warning' },
   ];
 
   stepCss(step: { active: boolean; done: boolean }): string {
@@ -445,28 +393,6 @@ export class DashboardPageComponent {
     return 'text-gray-400';
   }
 
-  dlqCardCss(): string {
-    return this.dlq()?.status === 'ALERT' ? 'border-red-300' : 'border-gray-200';
-  }
-
-  dlqBadgeCss(): string {
-    switch (this.dlq()?.status) {
-      case 'ALERT':
-        return 'bg-red-100 text-red-700';
-      case 'OK':
-        return 'bg-green-50 text-[#5cb85c]';
-      default:
-        return 'bg-gray-100 text-gray-500';
-    }
-  }
-
-  dlqBadgeLabel(): string {
-    const d = this.dlq();
-    if (d?.status === 'ALERT') return `${d.totalInDlq} en DLQ`;
-    if (d?.status === 'OK') return 'Sin mensajes fallidos';
-    return 'Sin datos';
-  }
-
   refresh(): void {
     this.dataService.reloadAll();
   }
@@ -475,3 +401,4 @@ export class DashboardPageComponent {
     this.router.navigate(['/bookings']);
   }
 }
+

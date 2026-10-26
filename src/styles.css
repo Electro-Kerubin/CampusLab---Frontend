@@ -39,3 +39,14 @@ body {
   background: rgba(255,255,255,0.08);
   color: #fff;
 }
+
+/* Selects con flecha propia: oculta la flecha nativa del navegador
+   (refuerzo global con !important por si el estilo inline se pierde) */
+.select-clean {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+.select-clean::-ms-expand {
+  display: none;
+}

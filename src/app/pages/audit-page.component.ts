@@ -8,6 +8,7 @@ import {
   LucideAngularModule,
   Search,
   Filter,
+  ChevronDown,
   CheckCircle,
   Clock,
   UserCheck,
@@ -51,7 +52,7 @@ const EVENT_TYPES: EventType[] = [
     LucideAngularModule,
   ],
   template: `
-    <div class="p-6">
+    <div class="p-8">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
@@ -73,36 +74,49 @@ const EVENT_TYPES: EventType[] = [
       @if (data.auditUnavailable()) {
         <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           No se pudo cargar el registro de auditoría. Por seguridad no se muestran datos de demostración:
-          vuelve a intentar con <strong>Filtrar</strong> o revisa que <code>ms-campuslab-audit</code> esté en línea
-          y que tu usuario tenga rol ADMIN o AUDITOR.
+          vuelve a intentar con <strong>Filtrar</strong> más tarde
+          y verifica que tu usuario tenga rol ADMIN o AUDITOR.
         </div>
       }
 
       <!-- Filters -->
-      <div class="flex flex-wrap gap-3 mb-5">
+      <div class="flex flex-wrap gap-3 mb-5 items-end">
         <div class="relative flex-1 min-w-48 max-w-sm">
           <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
           <input
             [ngModel]="search()"
             (ngModelChange)="search.set($event)"
             placeholder="Buscar por reserva, usuario, laboratorio..."
-            class="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
+            class="w-full border border-gray-200 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
           />
         </div>
-        <select
-          [ngModel]="filterType()"
-          (ngModelChange)="onTypeChange($event)"
-          class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600"
-        >
-          <option value="ALL">Todos los eventos</option>
-          @for (t of eventTypes; track t) {
-            <option [value]="t">{{ t }}</option>
-          }
-        </select>
-        <input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" aria-label="Desde" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
-        <input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" aria-label="Hasta" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
+        <div class="relative">
+          <select
+            [ngModel]="filterType()"
+            (ngModelChange)="onTypeChange($event)"
+            style="-webkit-appearance: none; -moz-appearance: none; appearance: none;"
+            class="select-clean appearance-none border border-gray-200 rounded-lg pl-3 pr-9 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600 cursor-pointer"
+          >
+            <option value="ALL">Todos los eventos</option>
+            @for (t of eventTypes; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+          <lucide-icon [img]="ChevronDown" size="14" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-[11px] font-semibold text-gray-500">Fecha de inicio</label>
+          <input type="date" [ngModel]="from()" (ngModelChange)="onFromDate($event)" [attr.max]="to() || todayISO" aria-label="Fecha de inicio" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
+        </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-[11px] font-semibold text-gray-500">Fecha de finalización</label>
+          <input type="date" [ngModel]="to()" (ngModelChange)="onToDate($event)" [attr.min]="from()" [attr.max]="todayISO" aria-label="Fecha de finalización" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white text-gray-600" />
+        </div>
         <button (click)="applyFilters()" class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors bg-white">
           <lucide-icon [img]="Filter" size="14" /> Filtrar
+        </button>
+        <button (click)="clearFilters()" class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors bg-white" title="Limpia todos los filtros aplicados">
+          <lucide-icon [img]="RotateCcw" size="14" /> Limpiar
         </button>
       </div>
 
@@ -167,7 +181,7 @@ const EVENT_TYPES: EventType[] = [
               <!-- Expanded detail -->
               @if (expanded() === ev.id) {
                 <div class="px-4 pb-4 pt-0 bg-gray-50/60 border-t border-gray-100">
-                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-xs">
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-3 text-xs">
                     <div>
                       <p class="text-gray-400 uppercase font-semibold text-[10px] mb-0.5">Evento ID</p>
                       <p class="font-mono text-gray-600">{{ ev.id }}</p>
@@ -190,8 +204,8 @@ const EVENT_TYPES: EventType[] = [
                     </div>
                   </div>
                   <div class="mt-3 flex items-center gap-2">
-                    <div class="flex items-center gap-1.5 text-[10px] text-gray-400 bg-white border border-gray-200 px-2 py-1 rounded font-mono">
-                      Kafka · bookings.events
+                    <div class="flex items-center gap-1.5 text-[10px] text-gray-400 bg-white border border-gray-200 px-2 py-1 rounded">
+                      Evento registrado automáticamente
                     </div>
                   </div>
                 </div>
@@ -204,7 +218,7 @@ const EVENT_TYPES: EventType[] = [
         </div>
       </div>
 
-      <p class="text-xs text-gray-400 mt-3 font-mono">GET /api/audit?userId=...&from=...&to=...&tipo=... · Kafka topic: bookings.events</p>
+      <p class="text-xs text-gray-400 mt-3">Cada acción sobre una reserva queda registrada automáticamente con fecha, usuario y origen.</p>
     </div>
   `,
 })
@@ -213,6 +227,7 @@ export class AuditPageComponent {
 
   readonly Search = Search;
   readonly Filter = Filter;
+  readonly ChevronDown = ChevronDown;
   readonly CheckCircle = CheckCircle;
   readonly Clock = Clock;
   readonly UserCheck = UserCheck;
@@ -231,9 +246,40 @@ export class AuditPageComponent {
   from = signal('');
   to = signal('');
 
+  /** Hoy en formato yyyy-MM-dd local: límite máximo de ambos filtros (no se audita el futuro). */
+  readonly todayISO = new Date().toLocaleDateString('en-CA');
+
   /** Consulta el rango de fechas al servidor (la búsqueda por texto y el tipo se filtran en pantalla). */
   applyFilters(): void {
     this.dataService.loadAuditEvents({ from: this.from(), to: this.to() });
+  }
+
+  /**
+   * Fecha de inicio: no puede ser posterior al fin ni a hoy (el picker lo
+   * limita con min/max, esto realinea si el usuario escribe a mano).
+   */
+  onFromDate(value: string): void {
+    this.from.set(value);
+    if (value && this.to() && value > this.to()) {
+      this.to.set(value);
+    }
+  }
+
+  /** Fecha de finalización: no puede ser anterior al inicio ni posterior a hoy. */
+  onToDate(value: string): void {
+    this.to.set(value);
+    if (value && this.from() && value < this.from()) {
+      this.from.set(value);
+    }
+  }
+
+  /** Limpia todos los filtros (texto, tipo y fechas) y vuelve a consultar sin rango. */
+  clearFilters(): void {
+    this.search.set('');
+    this.filterType.set('ALL');
+    this.from.set('');
+    this.to.set('');
+    this.dataService.loadAuditEvents({});
   }
 
   eventTypes: EventType[] = EVENT_TYPES;
@@ -276,3 +322,5 @@ export class AuditPageComponent {
     }
   }
 }
+
+

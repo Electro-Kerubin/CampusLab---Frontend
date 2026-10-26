@@ -36,7 +36,7 @@ import {
             <lucide-icon [img]="X" size="18" />
           </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-8 space-y-6">
           @if (error()) {
             <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
               {{ error() }}
@@ -215,7 +215,7 @@ export class NewReservationModalComponent {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, NewReservationModalComponent],
   template: `
-    <div class="p-6">
+    <div class="p-8">
       @if (showModal()) {
         <app-new-reservation-modal (close)="showModal.set(false)" (saved)="onSaved($event)" />
       }
@@ -271,7 +271,7 @@ export class NewReservationModalComponent {
             [ngModel]="search()"
             (ngModelChange)="search.set($event)"
             placeholder="Buscar por ID, recurso, solicitante..."
-            class="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
+            class="w-full border border-gray-200 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
           />
         </div>
         <button (click)="data.refreshBookings()" class="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 hover:border-gray-400 transition-colors bg-white">
@@ -343,7 +343,7 @@ export class NewReservationModalComponent {
                               <lucide-icon [img]="X" size="14" />
                             </button>
                           </div>
-                          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                          <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-4">
                             <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Recurso</p><p class="text-sm font-medium text-gray-800">{{ sel.resourceNombre || ('Recurso #' + sel.resourceId) }}</p></div>
                             <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Solicitante</p><p class="text-sm font-medium text-gray-800">{{ sel.studentEmail }}</p></div>
                             <div><p class="text-[10px] text-gray-400 uppercase font-semibold mb-0.5">Propósito</p><p class="text-sm font-medium text-gray-800">{{ sel.purpose }}</p></div>
@@ -387,7 +387,7 @@ export class NewReservationModalComponent {
         </div>
       </div>
 
-      <p class="text-xs text-gray-400 mt-3 font-mono">POST /api/bookings · GET /api/bookings?status=&amp;from=&amp;to= · PUT /api/bookings/&#123;id&#125;/status</p>
+      <p class="text-xs text-gray-400 mt-3">Cada reserva sigue su flujo: Solicitada → Aprobada → En preparación → En uso → Devuelta, o se cancela cuando corresponde.</p>
     </div>
   `,
 })
@@ -493,3 +493,5 @@ export class BookingsPageComponent {
     });
   }
 }
+
+

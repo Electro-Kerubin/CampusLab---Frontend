@@ -53,7 +53,7 @@ interface NavItem {
               (keydown.enter)="goToFirstResult()"
               (keydown.escape)="searchFocused.set(false)"
               placeholder="Buscar reservas, laboratorios, equipos..."
-              class="w-full bg-[#2d3045] border border-[#3d4060] rounded-md pl-9 pr-4 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#5cb85c] transition-colors"
+              class="w-full bg-[#2d3045] border border-[#3d4060] rounded-md pl-11 pr-4 py-1.5 text-sm text-gray-200 placeholder:text-slate-400 focus:outline-none focus:border-[#5cb85c] transition-colors"
             />
 
             @if (showResults()) {

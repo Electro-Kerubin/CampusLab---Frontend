@@ -43,7 +43,7 @@ const TAB_RESOURCE_TYPE: Record<Exclude<CatalogTab, 'labs'>, ResourceType> = {
             <lucide-icon [img]="X" size="18" />
           </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-8 space-y-6">
           @if (error()) {
             <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{{ error() }}</div>
           }
@@ -115,7 +115,7 @@ export class NewLabModalComponent {
             <lucide-icon [img]="X" size="18" />
           </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-8 space-y-6">
           @if (error()) {
             <div class="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{{ error() }}</div>
           }
@@ -161,7 +161,7 @@ export class NewLabModalComponent {
             <div>
               <label class="block text-xs font-semibold text-gray-600 mb-1.5">Número de serie *</label>
               <input type="text" [(ngModel)]="serialNumber" placeholder="Ej: UM-S5-001" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-gray-50" />
-              <p class="text-[11px] text-gray-400 mt-1">Obligatorio y único — así lo exige ms-campuslab-catalog para equipos.</p>
+              <p class="text-[11px] text-gray-400 mt-1">Obligatorio y único para cada equipo.</p>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -258,7 +258,7 @@ export class NewResourceModalComponent {
   standalone: true,
   imports: [CommonModule, FormsModule, LucideAngularModule, NewLabModalComponent, NewResourceModalComponent],
   template: `
-    <div class="p-6">
+    <div class="p-8">
       @if (showLabModal()) {
         <app-new-lab-modal (close)="showLabModal.set(false)" (saved)="onLabSaved($event)" />
       }
@@ -319,15 +319,15 @@ export class NewResourceModalComponent {
           [ngModel]="search()"
           (ngModelChange)="search.set($event)"
           [placeholder]="searchPlaceholder()"
-          class="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
+          class="w-full border border-gray-200 rounded-lg pl-11 pr-3 py-2 text-sm focus:outline-none focus:border-[#5cb85c] bg-white"
         />
       </div>
 
       <!-- Labs grid -->
       @if (tab() === 'labs') {
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           @for (lab of filteredLabs(); track lab.id) {
-            <div class="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
               <div class="flex items-start justify-between mb-3">
                 <div>
                   <span class="text-xs font-mono text-gray-400">#{{ lab.id }}</span>
@@ -447,7 +447,7 @@ export class NewResourceModalComponent {
         </div>
       }
 
-      <p class="text-xs text-gray-400 mt-3 font-mono">GET /api/catalog/resources · POST /api/catalog/resources · PUT /api/catalog/resources/&#123;id&#125;/stock</p>
+      <p class="text-xs text-gray-400 mt-3">Administra laboratorios, equipos e insumos: crea, edita y ajusta el stock disponible desde esta sección.</p>
     </div>
   `,
 })
@@ -589,3 +589,4 @@ export class CatalogPageComponent {
     });
   }
 }
+
