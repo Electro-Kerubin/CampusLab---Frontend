@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../services/auth.service';
 import {
@@ -474,7 +475,9 @@ export class CatalogPageComponent {
   }
 
   tab = signal<CatalogTab>('labs');
-  search = signal('');
+  // El buscador global del header navega con ?q= para pre-cargar el filtro
+  private route = inject(ActivatedRoute);
+  search = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   showLabModal = signal(false);
   showResourceModal = signal(false);
   actionError = signal<string | null>(null);

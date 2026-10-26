@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { EventType } from '../models';
 import {
@@ -221,7 +222,9 @@ export class AuditPageComponent {
 
   data = this.dataService;
 
-  search = signal('');
+  // El buscador global del header navega con ?q= para pre-cargar el filtro
+  private route = inject(ActivatedRoute);
+  search = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   filterType = signal<EventType | 'ALL'>('ALL');
   expanded = signal<string | null>(null);
   /** Rango de fechas (yyyy-MM-dd) que se consulta al servidor; vacío = sin límite. */

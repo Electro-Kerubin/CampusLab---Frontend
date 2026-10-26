@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { DataService } from '../services/data.service';
 import { AuthService } from '../services/auth.service';
 import {
@@ -411,7 +412,9 @@ export class BookingsPageComponent {
     return this.auth.hasAnyRole('TECNICO', 'ADMIN');
   }
 
-  search = signal('');
+  // El buscador global del header navega con ?q= para pre-cargar el filtro
+  private route = inject(ActivatedRoute);
+  search = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   filterStatus = signal<BookingStatus | 'ALL'>('ALL');
   showModal = signal(false);
   selected = signal<Booking | null>(null);

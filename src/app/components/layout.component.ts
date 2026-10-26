@@ -1,7 +1,9 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../services/auth.service';
+import { DataService } from '../services/data.service';
 import { PageId } from '../models';
 import {
   LucideAngularModule,
@@ -24,6 +26,7 @@ interface NavItem {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
+    FormsModule,
     LucideAngularModule,
   ],
   template: `
@@ -41,12 +44,73 @@ interface NavItem {
         <!-- Search -->
         <div class="flex-1 max-w-md mx-4">
           <div class="relative">
-            <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
             <input
               type="text"
+              [(ngModel)]="searchQuery"
+              (focus)="searchFocused.set(true)"
+              (blur)="onSearchBlur()"
+              (keydown.enter)="goToFirstResult()"
+              (keydown.escape)="searchFocused.set(false)"
               placeholder="Buscar reservas, laboratorios, equipos..."
               class="w-full bg-[#2d3045] border border-[#3d4060] rounded-md pl-9 pr-4 py-1.5 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-[#5cb85c] transition-colors"
             />
+
+            @if (showResults()) {
+              <div class="absolute left-0 right-0 mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 py-1 z-50 max-h-[70vh] overflow-auto">
+                @if (!hasResults()) {
+                  <div class="px-4 py-3 text-sm text-gray-500">Sin resultados para "{{ searchQuery() }}"</div>
+                }
+
+                @if (bookingResults().length > 0) {
+                  <div class="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Reservas</div>
+                  @for (b of bookingResults(); track b.id) {
+                    <button
+                      (mousedown)="$event.preventDefault()"
+                      (click)="navigateTo('/bookings')"
+                      class="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <div class="text-sm text-gray-800 truncate">#{{ b.id }} · {{ b.resourceNombre || ('Recurso #' + b.resourceId) }}</div>
+                      <div class="text-xs text-gray-500 truncate">{{ b.studentEmail }} · {{ b.purpose }}</div>
+                    </button>
+                  }
+                }
+
+                @if (labResults().length > 0) {
+                  <div class="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Laboratorios</div>
+                  @for (l of labResults(); track l.id) {
+                    <button
+                      (mousedown)="$event.preventDefault()"
+                      (click)="navigateTo('/catalog')"
+                      class="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <div class="text-sm text-gray-800 truncate">{{ l.name }}</div>
+                      <div class="text-xs text-gray-500 truncate">{{ l.location || 'Sin ubicación' }}</div>
+                    </button>
+                  }
+                }
+
+                @if (resourceResults().length > 0) {
+                  <div class="px-4 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Equipos e insumos</div>
+                  @for (r of resourceResults(); track r.id) {
+                    <button
+                      (mousedown)="$event.preventDefault()"
+                      (click)="navigateTo('/catalog')"
+                      class="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors"
+                    >
+                      <div class="text-sm text-gray-800 truncate">{{ r.name }}</div>
+                      <div class="text-xs text-gray-500 truncate">{{ r.labName }} · {{ r.brand || '' }} {{ r.model || '' }}</div>
+                    </button>
+                  }
+                }
+
+                @if (hasResults()) {
+                  <div class="px-4 py-2 border-t border-gray-100 text-[11px] text-gray-400">
+                    Enter para ir a la sección con el filtro aplicado
+                  </div>
+                }
+              </div>
+            }
           </div>
         </div>
 
@@ -113,6 +177,7 @@ interface NavItem {
 export class LayoutComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private data = inject(DataService);
 
   readonly FlaskConical = FlaskConical;
   readonly Search = Search;
@@ -120,6 +185,104 @@ export class LayoutComponent {
 
   user = this.auth.currentUser;
   menuOpen = false;
+
+  // --- Búsqueda global del header -----------------------------------------
+  searchQuery = signal('');
+  searchFocused = signal(false);
+
+  private readonly norm = (v: string | null | undefined): string =>
+    (v ?? '').toLowerCase().trim();
+
+  readonly bookingResults = computed(() => {
+    const q = this.norm(this.searchQuery());
+    if (q.length < 2) return [];
+    return this.data
+      .bookings()
+      .filter((b) => {
+        const idStr = String(b.id);
+        const idMatch =
+          q.startsWith('#')
+            ? idStr === q.slice(1)
+            : idStr.includes(q);
+        return (
+          idMatch ||
+          this.norm(b.resourceNombre).includes(q) ||
+          this.norm(String(b.resourceId)).includes(q) ||
+          this.norm(b.studentEmail).includes(q) ||
+          this.norm(b.purpose).includes(q)
+        );
+      })
+      .slice(0, 4);
+  });
+
+  readonly labResults = computed(() => {
+    const q = this.norm(this.searchQuery());
+    if (q.length < 2) return [];
+    return this.data
+      .labs()
+      .filter(
+        (l) =>
+          this.norm(l.name).includes(q) ||
+          this.norm(l.location).includes(q) ||
+          String(l.id).includes(q)
+      )
+      .slice(0, 3);
+  });
+
+  readonly resourceResults = computed(() => {
+    const q = this.norm(this.searchQuery());
+    if (q.length < 2) return [];
+    return this.data
+      .resources()
+      .filter((r) => {
+        const idStr = String(r.id);
+        const idMatch =
+          q.startsWith('#')
+            ? idStr === q.slice(1)
+            : idStr.includes(q);
+        return (
+          idMatch ||
+          this.norm(r.name).includes(q) ||
+          this.norm(r.brand).includes(q) ||
+          this.norm(r.model).includes(q) ||
+          this.norm(r.labName).includes(q)
+        );
+      })
+      .slice(0, 4);
+  });
+
+  readonly hasResults = computed(
+    () =>
+      this.bookingResults().length > 0 ||
+      this.labResults().length > 0 ||
+      this.resourceResults().length > 0
+  );
+
+  readonly showResults = computed(
+    () => this.searchFocused() && this.norm(this.searchQuery()).length >= 2
+  );
+
+  /** Enter: navega a la primera sección con resultados, llevando el filtro. */
+  goToFirstResult(): void {
+    if (!this.hasResults()) return;
+    if (this.bookingResults().length > 0) {
+      this.navigateTo('/bookings');
+    } else {
+      this.navigateTo('/catalog');
+    }
+  }
+
+  navigateTo(path: string): void {
+    this.searchFocused.set(false);
+    this.router.navigate([path], {
+      queryParams: { q: this.searchQuery().trim() },
+    });
+  }
+
+  onSearchBlur(): void {
+    // pequeño delay para que el click en un resultado se procese antes de cerrar
+    setTimeout(() => this.searchFocused.set(false), 150);
+  }
 
   navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard' },
