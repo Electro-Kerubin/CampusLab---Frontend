@@ -12,7 +12,6 @@ body {
   font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
 }
 
-/* Status badge colors */
 .status-solicitada { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
 .status-aprobada { background: #d4edda; color: #155724; border: 1px solid #28a745; }
 .status-en_preparacion { background: #cce5ff; color: #004085; border: 1px solid #0d6efd; }
@@ -20,13 +19,11 @@ body {
 .status-devuelta { background: #e2e3e5; color: #383d41; border: 1px solid #6c757d; }
 .status-cancelada { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; }
 
-/* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #c1c5cc; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ea3ad; }
 
-/* Nav active underline */
 .nav-item-active {
   border-bottom: 2px solid #5cb85c;
   color: #fff !important;
@@ -40,8 +37,6 @@ body {
   color: #fff;
 }
 
-/* Selects con flecha propia: oculta la flecha nativa del navegador
-   (refuerzo global con !important por si el estilo inline se pierde) */
 .select-clean {
   -webkit-appearance: none !important;
   -moz-appearance: none !important;

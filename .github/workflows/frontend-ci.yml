@@ -1,0 +1,52 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, dev, test]
+  pull_request:
+    branches: [main, dev, test]
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, pruebas unitarias y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Instalar dependencias (exactas, desde package-lock.json)
+        run: npm ci
+
+      - name: Lint (ESLint + angular-eslint)
+        run: npm run lint
+
+      - name: Pruebas unitarias con cobertura
+        run: npm run test:ci
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/campuslab/
+          if-no-files-found: warn
+
+      - name: Build de producción
+        run: npm run build
+
+      - name: Publicar build (dist/campuslab/browser)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/campuslab/browser/

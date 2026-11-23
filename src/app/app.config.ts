@@ -17,17 +17,12 @@ export const appConfig: ApplicationConfig = {
       routes,
       withInMemoryScrolling({ scrollPositionRestoration: 'enabled' })
     ),
-    // withInterceptorsFromDi(): sin esto, HTTP_INTERCEPTORS (interceptors de
-    // clase, como AuthInterceptor) se registran pero el HttpClient funcional
-    // nunca los ejecuta.
     provideHttpClient(withFetch(), withInterceptorsFromDi()),
     provideCharts(withDefaultRegisterables()),
     { provide: MSAL_INSTANCE, useFactory: msalInstanceFactory},
     { provide: MSAL_GUARD_CONFIG, useFactory: msalGuardConfigFactory },
-    // MSAL debe estar inicializado antes de que arranque la app (si no, leer la sesión guardada falla)
     provideMsalStartup(),
 
-    // Registrar interceptor HTTP para agregar token a todas las solicitudes
     { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true },
 
     MsalGuard,

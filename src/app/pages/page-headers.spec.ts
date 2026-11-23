@@ -1,4 +1,5 @@
-import { Type } from '@angular/core';
+//PARA TESTING
+import { signal, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -10,13 +11,6 @@ import { BookingsPageComponent } from './bookings-page.component';
 import { CatalogPageComponent } from './catalog-page.component';
 import { ReportsPageComponent } from './reports-page.component';
 
-/**
- * Regresión del QA: bajo el título de cada sección había un texto técnico ("ms-campuslab-bookings · /api/bookings/*")
- * y Reportería mostraba un aviso largo sobre Kafka cuando no tenía datos. Ninguno de los dos debe aparecer.
- *
- * Se usa el DataService real con HttpClient de pruebas sin responder nada: las páginas se renderizan con sus
- * listas vacías, que es justo el caso en que antes aparecía el aviso de Reportería.
- */
 describe('Encabezados de las páginas', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -24,12 +18,12 @@ describe('Encabezados de las páginas', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { hasAnyRole: () => true, hasRole: () => true } },
+        { provide: AuthService, useValue: { currentUser: signal({ role: 'Administrador' }), hasAnyRole: () => true, hasRole: () => true } },
       ],
     });
   });
 
-  const paginas: Array<{ nombre: string; componente: Type<unknown>; titulo: string }> = [
+  const paginas: { nombre: string; componente: Type<unknown>; titulo: string }[] = [
     { nombre: 'Reservas', componente: BookingsPageComponent, titulo: 'Gestión de Reservas' },
     { nombre: 'Catálogo', componente: CatalogPageComponent, titulo: 'Catálogo de Recursos' },
     { nombre: 'Auditoría', componente: AuditPageComponent, titulo: 'Auditoría y Trazabilidad' },
@@ -44,7 +38,6 @@ describe('Encabezados de las páginas', () => {
 
       const h1 = root.querySelector('h1');
       expect(h1?.textContent?.trim()).toBe(titulo);
-      // No hay ningún párrafo pegado al título dentro de su bloque de cabecera
       expect(h1?.nextElementSibling).toBeNull();
 
       expect(root.textContent ?? '').not.toContain('ms-campuslab-');
@@ -57,7 +50,6 @@ describe('Encabezados de las páginas', () => {
     const root = fixture.nativeElement as HTMLElement;
     const data = TestBed.inject(DataService);
 
-    // Es el caso exacto en que antes aparecía el aviso
     expect(data.hourlyMetrics().length).toBe(0);
     expect(data.resourceUsage().length).toBe(0);
 
@@ -66,7 +58,6 @@ describe('Encabezados de las páginas', () => {
     expect(texto).not.toContain('Si Kafka no está corriendo');
     expect(texto).not.toContain('⚠️');
     expect(root.querySelector('.bg-amber-50')).toBeNull();
-    // Las secciones siguen mostrando su propio estado vacío
     expect(texto).toContain('Sin datos en las últimas 24h');
   });
 });
@@ -78,7 +69,6 @@ describe('DataService: stock de equipos al cambiar el estado de una reserva', ()
     });
     const data = TestBed.inject(DataService);
     const http = TestBed.inject(HttpTestingController);
-    // Descarta las cargas iniciales del constructor
     http.match(() => true);
 
     data.updateBookingStatus(5, 'APROBADA').subscribe();

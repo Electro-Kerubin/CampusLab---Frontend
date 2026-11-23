@@ -124,7 +124,6 @@ export class NewReservationModalComponent {
   @Output() close = new EventEmitter<void>();
   @Output() saved = new EventEmitter<CreateBookingRequest>();
 
-  // ─── Selector de recurso con búsqueda ──────────────────────────────────
   resourceSearch = '';
   selectedResource = signal<CatalogResource | null>(null);
   showResourceList = signal(false);
@@ -138,12 +137,9 @@ export class NewReservationModalComponent {
   error = signal<string | null>(null);
 
   constructor() {
-    // Refresca el catálogo al abrir el modal por si cambió desde el último load.
     this.dataService.loadResources();
   }
 
-  // Métodos normales (no computed): ver nota en canSubmit() más abajo — leen
-  // campos planos ligados con ngModel, que un computed() nunca "vería" cambiar.
   filteredResources(): CatalogResource[] {
     const term = this.resourceSearch.trim().toLowerCase();
     const list = this.dataService.resources();
@@ -168,8 +164,6 @@ export class NewReservationModalComponent {
   }
 
   onResourceSearchChange(): void {
-    // Si el usuario sigue tipeando después de haber elegido uno, invalida la
-    // selección para forzar a elegir de nuevo de la lista.
     const sel = this.selectedResource();
     if (sel && this.resourceSearch !== sel.name) {
       this.selectedResource.set(null);
@@ -178,17 +172,9 @@ export class NewReservationModalComponent {
   }
 
   onResourceBlur(): void {
-    // Delay para que el (mousedown) de una opción alcance a dispararse antes
-    // de que el blur oculte la lista (si usáramos (click), el blur del input
-    // ocurre primero y la lista desaparece antes del click).
     setTimeout(() => this.showResourceList.set(false), 150);
   }
 
-  // OJO: NO usar computed() acá — computed() solo se recalcula cuando cambia
-  // un signal leído dentro de él, y date/purpose son campos planos ligados
-  // con ngModel, no signals. Un computed() nunca los "vería" cambiar y
-  // quedaría cacheado en el valor inicial (false) para siempre. Un método
-  // normal sí se reevalúa en cada ciclo de detección de cambios.
   canSubmit(): boolean {
     return !!this.selectedResource() && !!this.date && !!this.startHour && !!this.endHour && !!this.purpose.trim();
   }
@@ -220,7 +206,6 @@ export class NewReservationModalComponent {
         <app-new-reservation-modal (close)="showModal.set(false)" (saved)="onSaved($event)" />
       }
 
-      <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Gestión de Reservas</h1>
@@ -241,7 +226,6 @@ export class NewReservationModalComponent {
         </div>
       }
 
-      <!-- Status filter chips -->
       <div class="flex flex-wrap gap-2 mb-4">
         <button
           (click)="filterStatus.set('ALL')"
@@ -263,7 +247,6 @@ export class NewReservationModalComponent {
         }
       </div>
 
-      <!-- Search bar -->
       <div class="flex gap-3 mb-4">
         <div class="relative flex-1 max-w-sm">
           <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -279,7 +262,6 @@ export class NewReservationModalComponent {
         </button>
       </div>
 
-      <!-- Table -->
       <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -331,7 +313,6 @@ export class NewReservationModalComponent {
                   </td>
                 </tr>
 
-                <!-- Detalle: se despliega justo debajo de la reserva seleccionada -->
                 @if (selected(); as sel) {
                   @if (sel.id === b.id) {
                     <tr class="detail-row">
@@ -402,17 +383,14 @@ export class BookingsPageComponent {
 
   data = this.dataService;
 
-  /** Igual que @PreAuthorize("hasAnyRole('ESTUDIANTE','TECNICO','ADMIN')") en el backend. */
   canCreateBooking(): boolean {
     return this.auth.hasAnyRole('ESTUDIANTE', 'TECNICO', 'ADMIN');
   }
 
-  /** Igual que @PreAuthorize("hasAnyRole('TECNICO','ADMIN')") en el backend. */
   canChangeStatus(): boolean {
     return this.auth.hasAnyRole('TECNICO', 'ADMIN');
   }
 
-  // El buscador global del header navega con ?q= para pre-cargar el filtro
   private route = inject(ActivatedRoute);
   search = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   filterStatus = signal<BookingStatus | 'ALL'>('ALL');
@@ -429,7 +407,6 @@ export class BookingsPageComponent {
   statusClass(s: BookingStatus): string {
     return STATUS_CLASSES[s];
   }
-  /** Transiciones válidas desde el estado actual, según la máquina de estados real del backend. */
   transitionsFor(s: BookingStatus): BookingStatus[] {
     return VALID_TRANSITIONS[s];
   }
@@ -493,6 +470,4 @@ export class BookingsPageComponent {
     });
   }
 }
-
-
 

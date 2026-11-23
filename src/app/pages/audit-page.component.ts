@@ -52,7 +52,6 @@ const EVENT_TYPES: EventType[] = [
   ],
   template: `
     <div class="p-4 sm:p-8">
-      <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Auditoría y Trazabilidad</h1>
@@ -78,7 +77,6 @@ const EVENT_TYPES: EventType[] = [
         </div>
       }
 
-      <!-- Filters -->
       <div class="flex flex-wrap gap-3 mb-5 items-end">
         <div class="relative flex-1 min-w-48 max-w-sm">
           <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -115,7 +113,6 @@ const EVENT_TYPES: EventType[] = [
         </button>
       </div>
 
-      <!-- Stats summary -->
       <div class="grid grid-cols-3 md:grid-cols-6 gap-3 mb-5">
         @for (tipo of eventTypes; track tipo) {
           <button
@@ -133,7 +130,6 @@ const EVENT_TYPES: EventType[] = [
         }
       </div>
 
-      <!-- Timeline -->
       <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         <div class="border-b border-gray-100 px-4 py-2.5 bg-gray-50 flex items-center justify-between">
           <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Timeline de Eventos</span>
@@ -147,12 +143,10 @@ const EVENT_TYPES: EventType[] = [
                 class="w-full text-left px-4 py-3 flex items-center gap-4"
                 (click)="toggleExpanded(ev.id)"
               >
-                <!-- Icon -->
                 <div class="w-8 h-8 rounded-full flex items-center justify-center shrink-0" [class]="eventBg(ev.tipo)">
                   <lucide-icon [img]="eventIcon(ev.tipo)" size="14" [class]="eventColor(ev.tipo)" />
                 </div>
 
-                <!-- Main info -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
                     <span class="font-mono text-xs text-gray-400">{{ ev.reservaId }}</span>
@@ -162,7 +156,6 @@ const EVENT_TYPES: EventType[] = [
                   <p class="text-xs text-gray-500 mt-0.5 truncate">{{ ev.detalle }}</p>
                 </div>
 
-                <!-- User + time -->
                 <div class="text-right shrink-0 hidden md:block">
                   <div class="text-xs font-medium text-gray-700">{{ ev.usuario }}</div>
                   <div class="text-[10px] text-gray-400">{{ ev.rol }}</div>
@@ -173,7 +166,6 @@ const EVENT_TYPES: EventType[] = [
                 </div>
               </button>
 
-              <!-- Expanded detail -->
               @if (expanded() === ev.id) {
                 <div class="px-4 pb-4 pt-0 bg-gray-50/60 border-t border-gray-100">
                   <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-3 text-xs">
@@ -231,27 +223,19 @@ export class AuditPageComponent {
 
   data = this.dataService;
 
-  // El buscador global del header navega con ?q= para pre-cargar el filtro
   private route = inject(ActivatedRoute);
   search = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   filterType = signal<EventType | 'ALL'>('ALL');
   expanded = signal<string | null>(null);
-  /** Rango de fechas (yyyy-MM-dd) que se consulta al servidor; vacío = sin límite. */
   from = signal('');
   to = signal('');
 
-  /** Hoy en formato yyyy-MM-dd local: límite máximo de ambos filtros (no se audita el futuro). */
   readonly todayISO = new Date().toLocaleDateString('en-CA');
 
-  /** Consulta el rango de fechas al servidor (la búsqueda por texto y el tipo se filtran en pantalla). */
   applyFilters(): void {
     this.dataService.loadAuditEvents({ from: this.from(), to: this.to() });
   }
 
-  /**
-   * Fecha de inicio: no puede ser posterior al fin ni a hoy (el picker lo
-   * limita con min/max, esto realinea si el usuario escribe a mano).
-   */
   onFromDate(value: string): void {
     this.from.set(value);
     if (value && this.to() && value > this.to()) {
@@ -259,7 +243,6 @@ export class AuditPageComponent {
     }
   }
 
-  /** Fecha de finalización: no puede ser anterior al inicio ni posterior a hoy. */
   onToDate(value: string): void {
     this.to.set(value);
     if (value && this.from() && value < this.from()) {
@@ -267,7 +250,6 @@ export class AuditPageComponent {
     }
   }
 
-  /** Limpia todos los filtros (texto, tipo y fechas) y vuelve a consultar sin rango. */
   clearFilters(): void {
     this.search.set('');
     this.filterType.set('ALL');
@@ -316,6 +298,4 @@ export class AuditPageComponent {
     }
   }
 }
-
-
 

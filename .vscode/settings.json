@@ -1,0 +1,8 @@
+{
+  "remote.portsAttributes": {
+    "9876": {
+      "label": "Karma (pruebas)",
+      "onAutoForward": "ignore"
+    }
+  }
+}

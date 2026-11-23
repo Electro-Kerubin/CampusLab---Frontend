@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DataService } from '../services/data.service';
 import {
@@ -17,7 +17,6 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
   imports: [CommonModule, BaseChartDirective, LucideAngularModule],
   template: `
     <div class="p-4 sm:p-8 space-y-6">
-      <!-- Header -->
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Reportería & Analítica</h1>
@@ -27,7 +26,6 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         </button>
       </div>
 
-      <!-- KPI Summary -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
         @for (k of kpis(); track k.label) {
           <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
@@ -42,9 +40,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         }
       </div>
 
-      <!-- Charts grid -->
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <!-- Reservas por hora -->
         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Reservas por Hora (últimas 24h)</h3>
           @if (data.hourlyMetrics().length === 0) {
@@ -56,7 +52,6 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
           }
         </div>
 
-        <!-- Tiempo de ciclo -->
         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-gray-900 text-sm">Tiempo de Ciclo (minutos, por hora)</h3>
@@ -72,9 +67,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         </div>
       </div>
 
-      <!-- Bottom row -->
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <!-- Top recursos -->
         <div class="xl:col-span-2 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Recursos Más Usados (últimos 7 días)</h3>
           @if (data.topResourcesView().length === 0) {
@@ -102,7 +95,6 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
           }
         </div>
 
-        <!-- Distribución estados -->
         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Distribución de Estados</h3>
           @if (data.statusDistribution().length === 0) {
@@ -168,7 +160,6 @@ export class ReportsPageComponent {
     return labels[s] ?? s;
   }
 
-  // Reservas por hora (últimas 24h) — bookingsCount por bucketHour, de ms-report
   reservasChartData = computed<ChartConfiguration['data']>(() => {
     const sorted = [...this.dataService.hourlyMetrics()].sort((a, b) => a.bucketHour.localeCompare(b.bucketHour));
     return {
@@ -201,7 +192,6 @@ export class ReportsPageComponent {
     },
   };
 
-  // Tiempo de ciclo por hora (minutos) — avgCycleMinutes por bucketHour, de ms-report
   cicloChartData = computed<ChartConfiguration['data']>(() => {
     const sorted = [...this.dataService.hourlyMetrics()].sort((a, b) => a.bucketHour.localeCompare(b.bucketHour));
     return {
@@ -236,7 +226,6 @@ export class ReportsPageComponent {
     },
   };
 
-  // Distribución estados (donut) — derivado de bookings(), no de ms-report
   estadosChartData = computed<ChartConfiguration['data']>(() => ({
     labels: this.dataService.statusDistribution().map((e) => this.statusLabel(e.name)),
     datasets: [
@@ -245,7 +234,6 @@ export class ReportsPageComponent {
         backgroundColor: this.dataService.statusDistribution().map((e) => e.color),
         borderColor: '#fff',
         borderWidth: 2,
-        // @ts-ignore - cutout es válido para datasets doughnut en Chart.js 4
         cutout: '55%',
       },
     ],
@@ -264,6 +252,4 @@ export class ReportsPageComponent {
     return `hsl(${132 - i * 12}, 55%, ${55 - i * 3}%)`;
   }
 }
-
-
 

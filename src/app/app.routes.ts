@@ -2,15 +2,6 @@ import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 import { guestGuard, landingRedirect } from './guards/landing';
 
-/**
- * Qué pasa al abrir la aplicación:
- *
- *   /            sin sesión -> /login          con sesión -> /dashboard (un AUDITOR -> /audit)
- *   /login       sin sesión -> muestra el login   con sesión -> su pantalla de inicio (guestGuard)
- *   /cualquier   sin sesión -> /login          con sesión -> se queda ahí (rutas internas) o va a "/"
- *
- * La lógica de aterrizaje vive en guards/landing.ts.
- */
 export const routes: Routes = [
   {
     path: 'login',

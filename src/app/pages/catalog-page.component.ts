@@ -24,7 +24,6 @@ import {
   X,
 } from 'lucide-angular';
 
-/** Mapea la pestaña activa al ResourceType real que se crea/filtra. */
 const TAB_RESOURCE_TYPE: Record<Exclude<CatalogTab, 'labs'>, ResourceType> = {
   equipment: 'EQUIPO',
   supplies: 'INSUMO',
@@ -86,8 +85,6 @@ export class NewLabModalComponent {
   submitting = signal(false);
   error = signal<string | null>(null);
 
-  // Método normal (no computed): lee campos planos ligados con ngModel, no
-  // signals — un computed() no se recalcularía cuando cambian.
   canSubmit(): boolean {
     return !!this.name.trim() && this.capacity !== null && this.capacity >= 0;
   }
@@ -196,11 +193,6 @@ export class NewResourceModalComponent {
   @Output() close = new EventEmitter<void>();
   @Output() saved = new EventEmitter<CreateResourceRequest>();
 
-  /**
-   * Tipo de recurso a crear: lo define la pestaña activa del catálogo. Antes estaba fijo en
-   * 'EQUIPO', así que en "Insumos" el formulario mostraba los campos de un equipo y el padre
-   * cambiaba el tipo recién al guardar (sin unitOfMeasure => 409 "Los INSUMOS requieren 'unitOfMeasure'").
-   */
   @Input() resourceType: ResourceType = 'EQUIPO';
 
   name = '';
@@ -219,10 +211,6 @@ export class NewResourceModalComponent {
   labs = this.dataService.labs;
   categories = this.dataService.categories;
 
-  // Refleja las validaciones reales de ResourceService en ms-campuslab-catalog:
-  // EQUIPO exige quantityTotal + equipment.serialNumber; INSUMO exige
-  // quantityTotal + unitOfMeasure. Validar acá evita un viaje al backend
-  // solo para recibir un 409 por un campo vacío.
   canSubmit(): boolean {
     if (!this.name.trim() || this.labId === null || this.categoryId === null) return false;
     if (this.quantityTotal === null || this.quantityTotal < 0) return false;
@@ -270,7 +258,6 @@ export class NewResourceModalComponent {
         />
       }
 
-      <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Catálogo de Recursos</h1>
@@ -294,7 +281,6 @@ export class NewResourceModalComponent {
         <div class="mb-4 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{{ actionError() }}</div>
       }
 
-      <!-- Tabs -->
       <div class="flex gap-1 bg-gray-100 rounded-lg p-1 mb-5 w-fit">
         @for (t of tabs(); track t.id) {
           <button
@@ -312,7 +298,6 @@ export class NewResourceModalComponent {
         }
       </div>
 
-      <!-- Search -->
       <div class="relative mb-4 max-w-sm">
         <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
         <input
@@ -323,7 +308,6 @@ export class NewResourceModalComponent {
         />
       </div>
 
-      <!-- Labs grid -->
       @if (tab() === 'labs') {
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           @for (lab of filteredLabs(); track lab.id) {
@@ -347,7 +331,6 @@ export class NewResourceModalComponent {
         </div>
       }
 
-      <!-- Equipment table -->
       @if (tab() === 'equipment') {
         <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
           <div class="overflow-x-auto">
@@ -397,7 +380,6 @@ export class NewResourceModalComponent {
         </div>
       }
 
-      <!-- Supplies table -->
       @if (tab() === 'supplies') {
         <div class="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
           <div class="overflow-x-auto">
@@ -464,18 +446,15 @@ export class CatalogPageComponent {
 
   data = this.dataService;
 
-  /** Igual que @PreAuthorize("hasRole('ADMIN')") en el backend (crear/editar labs y recursos). */
   canManageCatalog(): boolean {
     return this.auth.hasRole('ADMIN');
   }
 
-  /** Igual que @PreAuthorize("hasAnyRole('ADMIN','TECNICO')") en el backend (ajustar stock). */
   canAdjustStock(): boolean {
     return this.auth.hasAnyRole('ADMIN', 'TECNICO');
   }
 
   tab = signal<CatalogTab>('labs');
-  // El buscador global del header navega con ?q= para pre-cargar el filtro
   private route = inject(ActivatedRoute);
   search = signal(this.route.snapshot.queryParamMap.get('q') ?? '');
   showLabModal = signal(false);
@@ -551,13 +530,11 @@ export class CatalogPageComponent {
     });
   }
 
-  /** Tipo de recurso que se crea según la pestaña activa (equipos o insumos). */
   activeResourceType(): ResourceType {
     return TAB_RESOURCE_TYPE[this.tab() as 'equipment' | 'supplies'] ?? 'EQUIPO';
   }
 
   onResourceSaved(payload: CreateResourceRequest): void {
-    // El tipo ya viene correcto desde el formulario (recibió la pestaña activa): no se reescribe aquí
     this.dataService.createResource(payload).subscribe({
       next: () => this.showResourceModal.set(false),
       error: (err) => {
@@ -589,5 +566,4 @@ export class CatalogPageComponent {
     });
   }
 }
-
 
