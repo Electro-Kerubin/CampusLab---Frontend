@@ -30,7 +30,7 @@ describe('AuthService', () => {
   });
 
   it('expone el nombre del usuario desde currentUser()', () => {
-    expect(service.currentUser().name).toContain('Carmen');
+    expect(service.currentUser()?.name).toContain('Carmen');
   });
 
   it('usa loginWithMicrosoft() como método de inicio de sesión', async () => {

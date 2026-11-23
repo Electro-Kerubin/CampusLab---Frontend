@@ -42,3 +42,6 @@ testem.log
 Thumbs.db
 
 serve-log.txt
+
+# Instaladores locales
+*.deb

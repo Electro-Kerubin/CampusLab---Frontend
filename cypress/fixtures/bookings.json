@@ -1,0 +1,4 @@
+[
+  { "id": 1, "lab": "Laboratorio de Química", "equipment": "Microscopio", "date": "2026-11-30", "time": "10:00", "purpose": "Práctica 3", "requester": "Ana Pérez", "status": "SOLICITADA" },
+  { "id": 2, "lab": "Laboratorio de Física", "equipment": "Osciloscopio", "date": "2026-12-01", "time": "14:00", "purpose": "Taller", "requester": "Luis Rojas", "status": "APROBADA" }
+]
