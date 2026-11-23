@@ -163,7 +163,7 @@ export class LoginPageComponent {
       // loginRedirect saca al usuario de la app hacia Microsoft;
       // el retorno lo procesa AppComponent con handleRedirectObservable().
       await this.auth.loginWithMicrosoft();
-    } catch (err) {
+    } catch {
       this.errorMsg.set(
         'No se pudo iniciar sesión con Microsoft. Verifica tu conexión e inténtalo de nuevo.'
       );

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DataService } from '../services/data.service';
 import {
@@ -245,7 +245,6 @@ export class ReportsPageComponent {
         backgroundColor: this.dataService.statusDistribution().map((e) => e.color),
         borderColor: '#fff',
         borderWidth: 2,
-        // @ts-ignore - cutout es válido para datasets doughnut en Chart.js 4
         cutout: '55%',
       },
     ],

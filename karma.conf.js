@@ -1,5 +1,5 @@
-// Karma configuration file, see link for more information
-// https://karma-runner.github.io/1.0/config/configuration-file.html
+// Configuración de Karma (runner de las pruebas unitarias con Jasmine).
+// https://karma-runner.github.io/6.4/config/configuration-file.html
 
 module.exports = function (config) {
   config.set({
@@ -11,40 +11,52 @@ module.exports = function (config) {
       require('karma-jasmine-html-reporter'),
       require('karma-coverage'),
       require('@angular-devkit/build-angular/plugins/karma'),
+      // Reporter legible para presentar (npm run test:demo): lista cada prueba con ✓/✗.
+      require('./scripts/karma-demo-reporter.cjs'),
     ],
-    customLaunchers: {
-        ChromeHeadlessCI: {
-          base: 'ChromeHeadless',
-          flags: ['--no-sandbox'],
-        },
-    },
     client: {
       jasmine: {
-        // you can add configuration options for Jasmine here
-        // the possible options are listed at https://jasmine.github.io/api/edge/Configuration.html
-        // for example, you can disable the random execution with `random: false`
-        // or set a specific seed with `seed: 4321`
+        // Orden aleatorio (por defecto en Jasmine): detecta pruebas que dependen unas de otras.
       },
     },
     jasmineHtmlReporter: {
-      suppressAll: true // removes the duplicated traces
+      suppressAll: true, // evita trazas duplicadas en el reporter HTML
     },
     coverageReporter: {
       dir: require('path').join(__dirname, './coverage/campuslab'),
       subdir: '.',
       reporters: [
-        { type: 'html' },
-        { type: 'text-summary' }
-      ]
-    },
-    reporters: ['progress', 'kjhtml'],
-    customLaunchers: {
-      ChromeHeadlessCI: {
-        base: 'ChromeHeadless',
-        flags: ['--no-sandbox'],
+        { type: 'html' }, // coverage/campuslab/index.html para revisar línea a línea
+        { type: 'lcovonly' }, // formato estándar para CI / SonarQube
+        { type: 'text-summary' }, // resumen en consola
+      ],
+      // Umbral mínimo GLOBAL: si la cobertura baja de estos valores, `ng test --code-coverage` falla.
+      // Medido el 2026-11-23: sentencias 97.2 %, ramas 88.88 %, funciones 95.2 %, líneas 97.57 %.
+      // Se fija 2-4 puntos por debajo para tolerar cambios menores sin bajar la vara (ver TESTING.md).
+      check: {
+        global: {
+          statements: 95,
+          branches: 85,
+          functions: 92,
+          lines: 95,
+        },
       },
     },
+    // 'coverage' solo reporta cuando se ejecuta con --code-coverage.
+    reporters: ['progress', 'kjhtml', 'coverage'],
+    customLaunchers: {
+      // Chrome sin interfaz y sin sandbox: necesario en contenedores (Codespaces, GitHub Actions).
+      ChromeHeadlessCI: {
+        base: 'ChromeHeadless',
+        flags: ['--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage'],
+      },
+    },
+    // Puerto por defecto (9876). En Codespaces, .vscode/settings.json evita que VS Code lo abra en el
+    // navegador: esa pestaña se sumaría como navegador de pruebas y alteraría el resultado (ver TESTING.md).
+    // Codespaces no tiene pantalla: por defecto se usa Chrome headless.
     browsers: ['ChromeHeadlessCI'],
-    restartOnFileChange: true
+    // Si no hay ninguna prueba, fallar en vez de terminar en verde.
+    failOnEmptyTestSuite: true,
+    restartOnFileChange: true,
   });
 };

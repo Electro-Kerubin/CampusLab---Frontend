@@ -29,7 +29,7 @@ describe('Encabezados de las páginas', () => {
     });
   });
 
-  const paginas: Array<{ nombre: string; componente: Type<unknown>; titulo: string }> = [
+  const paginas: { nombre: string; componente: Type<unknown>; titulo: string }[] = [
     { nombre: 'Reservas', componente: BookingsPageComponent, titulo: 'Gestión de Reservas' },
     { nombre: 'Catálogo', componente: CatalogPageComponent, titulo: 'Catálogo de Recursos' },
     { nombre: 'Auditoría', componente: AuditPageComponent, titulo: 'Auditoría y Trazabilidad' },

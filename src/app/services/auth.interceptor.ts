@@ -26,9 +26,9 @@ export class AuthInterceptor implements HttpInterceptor {
   private readonly router = inject(Router);
 
   intercept(
-    req: HttpRequest<any>,
+    req: HttpRequest<unknown>,
     next: HttpHandler
-  ): Observable<HttpEvent<any>> {
+  ): Observable<HttpEvent<unknown>> {
     const accounts = this.msalService.instance.getAllAccounts();
     if (accounts.length === 0) {
       // Sin sesión, pasar la solicitud tal cual

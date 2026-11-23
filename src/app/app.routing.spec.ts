@@ -55,12 +55,16 @@ class SimulatedMsal extends PublicClientApplication {
     this.requireInitialized();
     return this.account;
   }
-  override setActiveAccount(): void {}
+  override setActiveAccount(): void {
+    // la cuenta activa es fija en esta simulación
+  }
   override async handleRedirectPromise(): Promise<AuthenticationResult | null> {
     this.requireInitialized();
     return this.redirectResult;
   }
-  override async logoutRedirect(): Promise<void> {}
+  override async logoutRedirect(): Promise<void> {
+    // no se sale a Microsoft en las pruebas
+  }
 }
 
 function accountWithRoles(roles: string[]): AccountInfo {

@@ -1,38 +1,57 @@
 name: Frontend CI
 
+# Se ejecuta en cada push a las ramas de trabajo y en cada Pull Request hacia ellas.
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev, test]
   pull_request:
+    branches: [main, dev, test]
+
+# Si llega un push nuevo a la misma rama, se cancela la ejecución anterior (ahorra minutos de CI).
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
+    name: Lint, pruebas unitarias y build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run test:ci
-      - uses: actions/upload-artifact@v4
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      # Angular 21 requiere Node ^20.19, ^22.12 o >=24.
+      - name: Instalar Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias (exactas, desde package-lock.json)
+        run: npm ci
+
+      - name: Lint (ESLint + angular-eslint)
+        run: npm run lint
+
+      # Karma + Jasmine en Chrome headless (ubuntu-latest ya trae Google Chrome).
+      # Falla si alguna prueba falla o si la cobertura baja del umbral de karma.conf.js.
+      - name: Pruebas unitarias con cobertura
+        run: npm run test:ci
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage/
-      - run: npm run build
+          path: coverage/campuslab/
+          if-no-files-found: warn
 
-  e2e:
-    runs-on: ubuntu-latest
-    needs: quality
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cypress-io/github-action@v6
+      - name: Build de producción
+        run: npm run build
+
+      - name: Publicar build (dist/campuslab/browser)
+        uses: actions/upload-artifact@v4
         with:
-          build: npm run build
-          start: npx serve -s dist/campuslab/browser -l 4200
-          wait-on: 'http://localhost:4200'
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: cypress/screenshots
+          name: dist
+          path: dist/campuslab/browser/
