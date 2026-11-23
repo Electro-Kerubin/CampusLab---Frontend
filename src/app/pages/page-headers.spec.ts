@@ -1,4 +1,4 @@
-import { Type } from '@angular/core';
+import { signal, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -24,7 +24,7 @@ describe('Encabezados de las páginas', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: { hasAnyRole: () => true, hasRole: () => true } },
+        { provide: AuthService, useValue: { currentUser: signal({ role: 'Administrador' }), hasAnyRole: () => true, hasRole: () => true } },
       ],
     });
   });
