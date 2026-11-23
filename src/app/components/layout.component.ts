@@ -31,9 +31,7 @@ interface NavItem {
   ],
   template: `
     <div class="h-screen flex flex-col bg-[#f4f5f7]">
-      <!-- Top Header -->
       <header class="bg-[#1a1d2e] flex items-center px-4 h-14 gap-4 shrink-0 z-20 shadow-lg">
-        <!-- Logo -->
         <a routerLink="/dashboard" class="flex items-center gap-2 text-white font-bold text-lg select-none cursor-pointer">
           <div class="w-8 h-8 rounded-md bg-[#5cb85c] flex items-center justify-center">
             <lucide-icon [img]="FlaskConical" size="18" class="text-white" />
@@ -41,7 +39,6 @@ interface NavItem {
           <span class="font-semibold tracking-tight">CampusLab</span>
         </a>
 
-        <!-- Search (oculto en móviles: el header prioriza logo y usuario) -->
         <div class="flex-1 max-w-md mx-4 hidden sm:block">
           <div class="relative">
             <lucide-icon [img]="Search" size="14" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
@@ -116,9 +113,7 @@ interface NavItem {
 
         <div class="flex-1"></div>
 
-        <!-- Right side -->
         <div class="flex items-center gap-3">
-          <!-- User dropdown -->
           <div class="relative" [class]="menuOpen ? 'z-30' : ''">
             <button
               (click)="toggleMenu()"
@@ -152,7 +147,6 @@ interface NavItem {
         </div>
       </header>
 
-      <!-- Horizontal Nav Bar -->
       <nav class="bg-[#212330] border-b border-[#2d3045] shrink-0 z-10">
         <div class="flex items-stretch px-2 sm:px-4 h-11 gap-1 overflow-x-auto">
           @for (item of navItems; track item.id) {
@@ -167,7 +161,6 @@ interface NavItem {
         </div>
       </nav>
 
-      <!-- Page Content -->
       <main class="flex-1 overflow-auto">
         <router-outlet />
       </main>
@@ -186,7 +179,6 @@ export class LayoutComponent {
   user = this.auth.currentUser;
   menuOpen = false;
 
-  // --- Búsqueda global del header -----------------------------------------
   searchQuery = signal('');
   searchFocused = signal(false);
 
@@ -262,7 +254,6 @@ export class LayoutComponent {
     () => this.searchFocused() && this.norm(this.searchQuery()).length >= 2
   );
 
-  /** Enter: navega a la primera sección con resultados, llevando el filtro. */
   goToFirstResult(): void {
     if (!this.hasResults()) return;
     if (this.bookingResults().length > 0) {
@@ -280,7 +271,6 @@ export class LayoutComponent {
   }
 
   onSearchBlur(): void {
-    // pequeño delay para que el click en un resultado se procese antes de cerrar
     setTimeout(() => this.searchFocused.set(false), 150);
   }
 

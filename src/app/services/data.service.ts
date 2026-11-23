@@ -25,45 +25,24 @@ import {
   ALL_STATUSES,
 } from '../models';
 
-/**
- * Servicio de datos conectado al backend Java Spring Boot.
- *
- * Endpoints consumidos:
- *  - ms-campuslab-bookings  → GET/POST /api/bookings · PUT /api/bookings/{id}/status
- *  - ms-campuslab-catalog   → GET /api/catalog/labs|resources|categories
- *  - ms-campuslab-audit     → GET /api/audit
- *  - ms-campuslab-report    → GET /api/report/*
- *  - ms-campuslab-notify    → GET /api/notify/dlq (solo TECNICO/ADMIN)
- *
- * Si el backend no responde, cada colección cae automáticamente en datos
- * semilla para permitir el desarrollo del frontend sin backend levantado.
- */
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private http = inject(HttpClient);
   private readonly api = environment.apiUrl;
 
-  // ─── Estado (signals) ─────────────────────────────────────────────────
   readonly bookings = signal<Booking[]>([]);
   readonly labs = signal<Lab[]>([]);
-  /** Todos los recursos (SALA/EQUIPO/INSUMO). equipment()/supplies() abajo se derivan de esto. */
   readonly resources = signal<CatalogResource[]>([]);
   readonly categories = signal<Category[]>([]);
   readonly auditEvents = signal<AuditEvent[]>([]);
-  /** True si el servicio de auditoría no respondió (la página lo avisa en vez de mostrar datos falsos). */
   readonly auditUnavailable = signal(false);
   readonly usageByHour = signal<UsageByHour[]>([]);
   readonly equipmentStatus = signal<EquipmentStatusSummary[]>([]);
-  /** GET /api/report/kpis (ms-campuslab-report) — reservas/hora últimas 24h. Vacío si Kafka no está corriendo. */
   readonly hourlyMetrics = signal<BookingHourlyMetric[]>([]);
-  /** GET /api/report/top-resources (ms-campuslab-report) — uso de recursos últimos 7 días. */
   readonly resourceUsage = signal<ResourceUsageMetric[]>([]);
-  /** GET /api/notify/dlq (ms-campuslab-notify) — mensajes fallidos en las DLQ de RabbitMQ. null = el backend no respondió. */
   readonly dlqStatus = signal<DlqStatus | null>(null);
 
-  /** True mientras hay peticiones en vuelo */
   readonly loading = signal(false);
-  /** True si el backend no respondió y se usan datos semilla */
   readonly usingFallback = signal(false);
 
   readonly ranges = ['Últimas 24h', 'Últimos 7 días', 'Este mes', 'Último trimestre'];
@@ -72,7 +51,6 @@ export class DataService {
     this.reloadAll();
   }
 
-  // ─── Carga inicial ────────────────────────────────────────────────────
   reloadAll(): void {
     this.loading.set(true);
     this.loadBookings();
@@ -86,13 +64,11 @@ export class DataService {
     this.loadResourceUsage();
   }
 
-  /** Refresca solo reservas y auditoría (las más cambiantes). */
   refreshBookings(): void {
     this.loadBookings();
     this.loadAuditEvents();
   }
 
-  // ─── Bookings: ms-campuslab-bookings ──────────────────────────────────
   loadBookings(status?: BookingStatus): void {
     const params = status ? `?status=${encodeURIComponent(status)}` : '';
     this.http
@@ -117,13 +93,11 @@ export class DataService {
       .pipe(
         tap((updated) => {
           this.bookings.update((cur) => cur.map((b) => (b.id === id ? updated : b)));
-          // Aprobar / devolver / cancelar mueve el stock de los equipos en el catálogo.
           this.loadResources();
         })
       );
   }
 
-  // ─── Catalog: ms-campuslab-catalog ────────────────────────────────────
   loadLabs(): void {
     this.http
       .get<Lab[]>(`${this.api}/catalog/labs`)
@@ -137,7 +111,6 @@ export class DataService {
       .pipe(tap((created) => this.labs.update((cur) => [created, ...cur])));
   }
 
-  /** Todos los recursos, o solo los de un laboratorio si se pasa labId. */
   loadResources(labId?: number): void {
     const params = labId ? `?labId=${labId}` : '';
     this.http
@@ -152,7 +125,6 @@ export class DataService {
       .pipe(tap((created) => this.resources.update((cur) => [created, ...cur])));
   }
 
-  /** Suma/resta stock (delta positivo o negativo) a un recurso. */
   adjustStock(id: number, payload: StockAdjustRequest): Observable<CatalogResource> {
     return this.http
       .put<CatalogResource>(`${this.api}/catalog/resources/${id}/stock`, payload)
@@ -170,13 +142,10 @@ export class DataService {
       .subscribe((data) => this.categories.set(data));
   }
 
-  /** Recursos de tipo EQUIPO, derivados de resources(). */
   readonly equipment = computed(() => this.resources().filter((r) => r.resourceType === 'EQUIPO'));
 
-  /** Recursos de tipo INSUMO, derivados de resources(). */
   readonly supplies = computed(() => this.resources().filter((r) => r.resourceType === 'INSUMO'));
 
-  // ─── Audit: ms-campuslab-audit ────────────────────────────────────────
   loadAuditEvents(filters?: { tipo?: string; userId?: string; from?: string; to?: string }): void {
     const qs = new URLSearchParams(
       Object.fromEntries(
@@ -188,8 +157,6 @@ export class DataService {
     this.http
       .get<AuditEvent[]>(`${this.api}/audit${suffix}`)
       .pipe(
-        // Un registro de auditoría NUNCA se inventa: si el servicio falla se muestra vacío y con aviso,
-        // no con eventos de demostración (a diferencia de reportería o catálogo)
         catchError((err) => {
           console.error('[CampusLab] No se pudo cargar la auditoría:', err);
           this.auditUnavailable.set(true);
@@ -199,7 +166,6 @@ export class DataService {
       .subscribe((data) => this.auditEvents.set(data));
   }
 
-  // ─── Report: ms-campuslab-report ──────────────────────────────────────
   loadUsageByHour(): void {
     this.http
       .get<UsageByHour[]>(`${this.api}/report/usage-by-hour`)
@@ -214,12 +180,6 @@ export class DataService {
       .subscribe((data) => this.equipmentStatus.set(data));
   }
 
-  /**
-   * Reservas por hora (últimas 24h) desde ms-campuslab-report. A diferencia
-   * del resto de las colecciones, acá un array vacío NO cae en datos
-   * semilla: es una respuesta 200 legítima cuando Kafka no está corriendo o
-   * no hubo reservas nuevas — mostrar datos falsos ahí sería engañoso.
-   */
   loadHourlyMetrics(): void {
     this.http
       .get<BookingHourlyMetric[]>(`${this.api}/report/kpis`)
@@ -227,7 +187,6 @@ export class DataService {
       .subscribe((data) => this.hourlyMetrics.set(data));
   }
 
-  /** Uso de recursos (últimos 7 días) desde ms-campuslab-report. Mismo caso que arriba. */
   loadResourceUsage(): void {
     this.http
       .get<ResourceUsageMetric[]>(`${this.api}/report/top-resources`)
@@ -235,12 +194,6 @@ export class DataService {
       .subscribe((data) => this.resourceUsage.set(data));
   }
 
-  // ─── Notify: ms-campuslab-notify ──────────────────────────────────────
-  /**
-   * Estado de las DLQ de RabbitMQ. No cae en datos semilla: si el backend no
-   * responde queda en null y la UI lo muestra como "sin datos" (un "todo OK"
-   * inventado ocultaría justamente lo que esta alerta debe avisar).
-   */
   loadDlqStatus(): void {
     this.http
       .get<DlqStatus>(`${this.api}/notify/dlq`)
@@ -248,11 +201,6 @@ export class DataService {
       .subscribe((data) => this.dlqStatus.set(data));
   }
 
-  /**
-   * "Top recursos" para mostrar en la UI: enriquece resourceUsage() con el
-   * nombre real del recurso (desde el catálogo ya cargado), ordenado de
-   * mayor a menor uso.
-   */
   readonly topResourcesView = computed(() => {
     const resourcesById = new Map(this.resources().map((r) => [r.id, r]));
     return this.resourceUsage()
@@ -264,11 +212,6 @@ export class DataService {
       }));
   });
 
-  /**
-   * Distribución de reservas por estado, para el donut de Reportería.
-   * No viene de ms-report: se agrega en el cliente a partir de
-   * dataService.bookings() (datos reales de ms-campuslab-bookings).
-   */
   readonly statusDistribution = computed<StatusDistribution[]>(() => {
     const bs = this.bookings();
     return ALL_STATUSES.map((s) => ({
@@ -278,12 +221,6 @@ export class DataService {
     })).filter((d) => d.value > 0);
   });
 
-  /**
-   * KPIs resumen para las 4 tarjetas de Reportería. totalReservas y
-   * tiempoCicloPromedio salen de ms-report (últimas 24h); tasaAprobacion y
-   * tasaCancelacion se calculan sobre TODAS las reservas cargadas de
-   * ms-campuslab-bookings (no hay ese cálculo en ms-report).
-   */
   readonly reportKpis = computed(() => {
     const hourly = this.hourlyMetrics();
     const totalReservas = hourly.reduce((acc, m) => acc + m.bookingsCount, 0);
@@ -304,8 +241,6 @@ export class DataService {
     };
   });
 
-  // ─── Derivados del estado ─────────────────────────────────────────────
-  /** Pipeline del flujo de reservas derivado de los estados actuales. */
   readonly workflowSteps = computed<WorkflowStep[]>(() => {
     const bs = this.bookings();
     const count = (s: BookingStatus) => bs.filter((b) => b.status === s).length;
@@ -331,7 +266,6 @@ export class DataService {
     });
   });
 
-  /** KPIs del dashboard derivados de reservas y equipos. */
   readonly activeBookingsCount = computed(
     () =>
       this.bookings().filter((b) =>
@@ -351,7 +285,6 @@ export class DataService {
     return { pct: total > 0 ? Math.round((used / total) * 100) : 0, inUse: used };
   });
 
-  // ─── Helpers ──────────────────────────────────────────────────────────
   private fallback<T>(endpoint: string, seed: T): Observable<T> {
     console.warn(
       `[CampusLab] Backend no disponible para /${endpoint}. Usando datos de demostración.`
@@ -361,8 +294,6 @@ export class DataService {
   }
 }
 
-// ─── Datos semilla (fallback sin backend) ─────────────────────────────────
-// Mismo shape que BookingResponse de ms-campuslab-bookings (vía el BFF).
 const SEED_BOOKINGS: Booking[] = [
   { id: 1, resourceId: 101, resourceNombre: 'Laboratorio A102', studentEmail: 'maria.gonzalez@duocuc.cl', purpose: 'Impresión 3D — proyecto final', startTime: '2026-09-11T09:00:00', endTime: '2026-09-11T11:00:00', status: 'EN_PREPARACION', createdAt: '2026-09-10T18:00:00', updatedAt: '2026-09-11T08:00:00' },
   { id: 2, resourceId: 204, resourceNombre: 'Laboratorio B204', studentEmail: 'carlos.ruiz@duocuc.cl', purpose: 'Microscopía electrónica — práctica', startTime: '2026-09-11T11:00:00', endTime: '2026-09-11T13:00:00', status: 'APROBADA', createdAt: '2026-09-10T12:00:00', updatedAt: '2026-09-10T12:30:00' },
@@ -374,8 +305,6 @@ const SEED_BOOKINGS: Booking[] = [
   { id: 8, resourceId: 103, resourceNombre: 'Laboratorio A102', studentEmail: 'andres.vega@duocuc.cl', purpose: 'Impresión 3D — pieza de repuesto', startTime: '2026-09-12T16:00:00', endTime: '2026-09-12T18:00:00', status: 'APROBADA', createdAt: '2026-09-11T20:00:00', updatedAt: '2026-09-12T08:00:00' },
 ];
 
-// Mismo shape que LabResponseDTO/ResourceResponseDTO/CategoryResponseDTO de
-// ms-campuslab-catalog.
 const SEED_LABS: Lab[] = [
   { id: 1, name: 'Laboratorio A102', location: 'Edificio A, Piso 1', capacity: 15, createdAt: '2026-01-10T08:00:00' },
   { id: 2, name: 'Laboratorio B204', location: 'Edificio B, Piso 2', capacity: 12, createdAt: '2026-01-10T08:00:00' },
@@ -423,8 +352,3 @@ const SEED_EQUIPMENT_STATUS: EquipmentStatusSummary[] = [
   { name: 'PCs Alta Gama', ocupado: 75, disponible: 15, mantenimiento: 10 },
 ];
 
-// SEED_BOOKINGS_BY_HOUR / SEED_TOP_RESOURCES / SEED_STATUS_DISTRIBUTION /
-// SEED_CYCLE_TIME / SEED_KPIS ya no existen: hourlyMetrics()/resourceUsage()
-// no caen en datos semilla (ver loadHourlyMetrics/loadResourceUsage arriba),
-// y reportKpis()/statusDistribution() son computed derivados de datos reales
-// (bookings() + hourlyMetrics()), no fetches propios.

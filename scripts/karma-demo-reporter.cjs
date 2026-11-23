@@ -1,9 +1,4 @@
-// Reporter de Karma para PRESENTAR la ejecución de las pruebas (npm run test:demo).
-//
-// En vez de puntos, muestra cada prueba con su nombre, agrupada por archivo/describe, con ✓ o ✗,
-// y al final un resumen. Oculta los console.log de la app para que la salida se pueda leer en pantalla.
-// No agrega dependencias: es un plugin "inline" de Karma registrado en karma.conf.js.
-
+//PARA TESTING
 const C = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
   red: (s) => `\x1b[31m${s}\x1b[0m`,
@@ -17,7 +12,6 @@ function DemoReporter(baseReporterDecorator) {
   const results = [];
   const started = Date.now();
 
-  // Silenciar lo que imprime la app (console.log de AuthService, etc.) y el progreso por defecto.
   this.onBrowserLog = () => {};
   this.onBrowserStart = () => {};
 

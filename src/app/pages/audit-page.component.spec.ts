@@ -1,3 +1,4 @@
+//PARA TESTING
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -37,7 +38,7 @@ describe('AuditPageComponent', () => {
       ],
     });
     data = TestBed.inject(DataService);
-    spyOn(data, 'loadAuditEvents'); // las consultas al servidor se verifican como llamadas
+    spyOn(data, 'loadAuditEvents');
     data.auditEvents.set([
       event('1', 'CREADA', { lab: 'Laboratorio B204' }),
       event('2', 'APROBADA', { usuario: 'luis@duocuc.cl' }),
@@ -129,10 +130,10 @@ describe('AuditPageComponent', () => {
   it('las fechas se realinean si el inicio queda después del fin (o al revés)', () => {
     create();
     comp.onToDate('2026-11-10');
-    comp.onFromDate('2026-11-15'); // inicio > fin → el fin se mueve al inicio
+    comp.onFromDate('2026-11-15');
     expect(comp.to()).toBe('2026-11-15');
 
-    comp.onToDate('2026-11-01'); // fin < inicio → el inicio se mueve al fin
+    comp.onToDate('2026-11-01');
     expect(comp.from()).toBe('2026-11-01');
   });
 

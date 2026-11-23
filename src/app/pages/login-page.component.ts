@@ -15,9 +15,7 @@ import {
   imports: [CommonModule, LucideAngularModule],
   template: `
     <div class="min-h-screen bg-[#1a1d2e] flex">
-      <!-- Left panel — branding -->
       <div class="hidden lg:flex flex-col flex-1 p-12 justify-between relative overflow-hidden">
-        <!-- Background pattern -->
         <div class="absolute inset-0 opacity-5 pointer-events-none">
           @for (i of patternCircles; track i) {
             <div
@@ -29,7 +27,6 @@ import {
           }
         </div>
 
-        <!-- Logo -->
         <div class="relative flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-[#5cb85c] flex items-center justify-center shadow-lg">
             <lucide-icon [img]="FlaskConical" size="22" class="text-white" />
@@ -37,7 +34,6 @@ import {
           <span class="text-white text-2xl font-bold tracking-tight">CampusLab</span>
         </div>
 
-        <!-- Hero text -->
         <div class="relative">
           <h1 class="text-4xl font-bold text-white leading-tight mb-4">
             Gestión de laboratorios<br />
@@ -47,7 +43,6 @@ import {
             Reserva equipos, administra stock de insumos y coordina el uso de 20 laboratorios desde una sola plataforma.
           </p>
 
-          <!-- Feature pills -->
           <div class="flex flex-wrap gap-3 mt-8">
             <div class="flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 text-sm text-gray-300 border border-white/10">
               <lucide-icon [img]="ShieldCheck" size="14" class="text-[#5cb85c]" />
@@ -64,7 +59,6 @@ import {
           </div>
         </div>
 
-        <!-- Stats row -->
         <div class="relative grid grid-cols-3 gap-6">
           <div>
             <div class="text-2xl font-bold text-white">20</div>
@@ -81,10 +75,8 @@ import {
         </div>
       </div>
 
-      <!-- Right panel — login card -->
       <div class="flex-1 lg:max-w-md xl:max-w-lg flex items-center justify-center p-8 bg-white">
         <div class="w-full max-w-sm">
-          <!-- Mobile logo -->
           <div class="flex lg:hidden items-center gap-3 mb-8">
             <div class="w-9 h-9 rounded-lg bg-[#5cb85c] flex items-center justify-center">
               <lucide-icon [img]="FlaskConical" size="18" class="text-white" />
@@ -97,7 +89,6 @@ import {
             Inicia sesión con tu cuenta institucional para acceder a la plataforma.
           </p>
 
-          <!-- Microsoft SSO button (ÚNICA forma de acceder) -->
           <button
             (click)="login()"
             [disabled]="loading()"
@@ -127,7 +118,6 @@ import {
             </div>
           }
 
-          <!-- Info -->
           <div class="flex items-start gap-2 bg-[#f4f9f4] border border-[#c3e6c3] rounded-lg p-3">
             <lucide-icon [img]="ShieldCheck" size="14" class="text-[#5cb85c] mt-0.5 shrink-0" />
             <p class="text-xs text-gray-600 leading-relaxed">
@@ -160,8 +150,6 @@ export class LoginPageComponent {
     this.loading.set(true);
     this.errorMsg.set(null);
     try {
-      // loginRedirect saca al usuario de la app hacia Microsoft;
-      // el retorno lo procesa AppComponent con handleRedirectObservable().
       await this.auth.loginWithMicrosoft();
     } catch {
       this.errorMsg.set(

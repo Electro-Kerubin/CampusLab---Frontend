@@ -1,10 +1,4 @@
-// Protección contra "falsos verdes" de `ng test`.
-//
-// Si el proceso de pruebas recibe SIGTERM mientras corre Karma (cancelación, un proceso externo,
-// falta de recursos), Angular CLI termina con código 0 SIN haber ejecutado ninguna prueba.
-// karma-coverage solo escribe lcov.info cuando la ejecución termina de verdad, así que:
-//   --clean   borra la cobertura anterior (antes de las pruebas)
-//   (sin args) falla si no se generó lcov.info (después de las pruebas)
+//PARA TESTING
 const fs = require('fs');
 const path = require('path');
 

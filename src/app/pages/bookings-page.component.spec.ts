@@ -1,3 +1,4 @@
+//PARA TESTING
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -116,7 +117,7 @@ describe('BookingsPageComponent', () => {
   describe('cambio de estado (solo TECNICO/ADMIN)', () => {
     it('ofrece solo las transiciones válidas de la máquina de estados', () => {
       create(['TECNICO']);
-      rowOf(1).click(); // SOLICITADA → APROBADA | CANCELADA
+      rowOf(1).click();
       fixture.detectChanges();
       const transitions = buttons().filter((b) => b.textContent?.includes('→')).map((b) => b.textContent!.trim());
       expect(transitions).toEqual(['→ Aprobada', '→ Cancelada']);
@@ -124,7 +125,7 @@ describe('BookingsPageComponent', () => {
 
     it('un estado final no ofrece transiciones', () => {
       create(['ADMIN']);
-      rowOf(3).click(); // DEVUELTA
+      rowOf(3).click();
       fixture.detectChanges();
       expect(text()).toContain('Devuelta es un estado final');
     });
@@ -247,10 +248,10 @@ describe('NewReservationModalComponent', () => {
 
   it('no se puede enviar sin recurso o sin propósito', () => {
     modal.purpose = 'Práctica';
-    expect(modal.canSubmit()).toBeFalse(); // sin recurso
+    expect(modal.canSubmit()).toBeFalse();
     modal.selectResource(resources[0]);
     modal.purpose = '   ';
-    expect(modal.canSubmit()).toBeFalse(); // propósito vacío
+    expect(modal.canSubmit()).toBeFalse();
     modal.purpose = 'Práctica';
     expect(modal.canSubmit()).toBeTrue();
   });

@@ -1,9 +1,9 @@
+//PARA TESTING
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { LoginPageComponent } from './login-page.component';
 import { AuthService } from '../services/auth.service';
 
-/** Login exclusivo con Microsoft: AuthService se simula, nunca se redirige a Azure. */
 describe('LoginPageComponent', () => {
   let fixture: ComponentFixture<LoginPageComponent>;
   let loginWithMicrosoft: jasmine.Spy;

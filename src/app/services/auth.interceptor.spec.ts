@@ -1,3 +1,4 @@
+//PARA TESTING
 import { TestBed, fakeAsync, flushMicrotasks } from '@angular/core/testing';
 import { HTTP_INTERCEPTORS, HttpClient, provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -12,16 +13,11 @@ import {
   provideMsalMock,
 } from '../../testing/msal-testing';
 
-/**
- * AuthInterceptor: el README exige "Authorization: Bearer <token>" en cada request al API Gateway.
- * Se registra igual que en app.config.ts (HTTP_INTERCEPTORS + withInterceptorsFromDi) y se usa
- * HttpTestingController: ninguna petición sale a la red ni a Azure.
- */
 describe('AuthInterceptor', () => {
   const URL = 'http://localhost:8080/api/bookings';
   const nowSec = () => Math.floor(Date.now() / 1000);
-  const validToken = () => fakeJwt({ exp: nowSec() + 3600 }); // vence en 1 h
-  const expiringToken = () => fakeJwt({ exp: nowSec() + 60 }); // vence en 1 min (< margen de 2 min)
+  const validToken = () => fakeJwt({ exp: nowSec() + 3600 });
+  const expiringToken = () => fakeJwt({ exp: nowSec() + 60 });
 
   let msal: MsalMock;
   let http: HttpClient;
@@ -88,7 +84,7 @@ describe('AuthInterceptor', () => {
     const req = backend.expectOne(URL);
     expect(msal.spies.acquireTokenSilent).toHaveBeenCalledOnceWith({ scopes: ['openid', 'profile'], account });
     expect(req.request.headers.get('Authorization')).toBe(`Bearer ${fresh}`);
-    expect(account.idToken).toBe(fresh); // queda cacheado para la siguiente petición
+    expect(account.idToken).toBe(fresh);
     req.flush([]);
   }));
 
@@ -118,7 +114,7 @@ describe('AuthInterceptor', () => {
   }));
 
   it('sin token en caché ni refresco posible, no agrega Authorization', fakeAsync(() => {
-    setup([accountWithRoles(['ADMIN'])]); // cuenta sin idToken
+    setup([accountWithRoles(['ADMIN'])]);
     msal.spies.acquireTokenSilent.and.resolveTo(null as unknown as AuthenticationResult);
 
     http.get(URL).subscribe();

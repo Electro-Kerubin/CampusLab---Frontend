@@ -1,3 +1,4 @@
+//PARA TESTING
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -12,10 +13,6 @@ const booking = (id: number, status: BookingStatus) => ({ id, status }) as Booki
 const equipo = (total: number, available: number) =>
   ({ resourceType: 'EQUIPO', quantityTotal: total, quantityAvailable: available }) as CatalogResource;
 
-/**
- * Dashboard con el DataService REAL (HttpClient de pruebas, sin backend): se cargan los signals
- * directamente y se verifica lo que ve el usuario. AuthService se simula para elegir el rol.
- */
 describe('DashboardPageComponent', () => {
   let fixture: ComponentFixture<DashboardPageComponent>;
   let data: DataService;
@@ -40,7 +37,6 @@ describe('DashboardPageComponent', () => {
   }
 
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
-  /** Número grande de la tarjeta KPI cuyo título es `title`. */
   const kpi = (title: string) => {
     const label = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('p')).find(
       (p) => p.textContent?.trim() === title
@@ -57,7 +53,7 @@ describe('DashboardPageComponent', () => {
       booking(4, 'SOLICITADA'),
       booking(5, 'CANCELADA'),
     ]);
-    data.resources.set([equipo(4, 1)]); // 3 de 4 en uso
+    data.resources.set([equipo(4, 1)]);
     fixture.detectChanges();
 
     expect(kpi('Reservas Activas')).toBe('2');
@@ -69,9 +65,9 @@ describe('DashboardPageComponent', () => {
   it('el anillo de ocupación refleja el porcentaje', () => {
     create(['ADMIN']);
     const comp = fixture.componentInstance;
-    expect(comp.circleOffset()).toBeCloseTo(comp.circleCirc, 5); // 0 % → anillo vacío
+    expect(comp.circleOffset()).toBeCloseTo(comp.circleCirc, 5);
 
-    data.resources.set([equipo(2, 1)]); // 50 %
+    data.resources.set([equipo(2, 1)]);
     expect(comp.circleOffset()).toBeCloseTo(comp.circleCirc / 2, 5);
   });
 

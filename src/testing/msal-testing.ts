@@ -1,13 +1,8 @@
+//PARA TESTING
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { AccountInfo, AuthenticationResult, InteractionStatus } from '@azure/msal-browser';
 import { BehaviorSubject, of } from 'rxjs';
 
-/**
- * Dobles de prueba de MSAL. Ninguna prueba habla con Azure AD: se simula solo
- * QUÉ cuentas tiene MSAL en caché y se espía lo que la app le pide (login, logout, token).
- */
-
-/** Cuenta de Azure AD con los claims indicados (por defecto, el claim "roles"). */
 export function fakeAccount(
   claims: Record<string, unknown> = {},
   overrides: Partial<AccountInfo> = {}
@@ -27,7 +22,6 @@ export function fakeAccount(
 export const accountWithRoles = (roles: string[], overrides: Partial<AccountInfo> = {}) =>
   fakeAccount({ roles }, overrides);
 
-/** JWT sin firma, solo para pruebas: header.payload.firma con el payload en base64url. */
 export function fakeJwt(payload: Record<string, unknown>): string {
   const b64url = (o: object) =>
     btoa(JSON.stringify(o)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -37,9 +31,7 @@ export function fakeJwt(payload: Record<string, unknown>): string {
 export interface MsalMock {
   service: MsalService;
   broadcast: MsalBroadcastService;
-  /** Emite estados de interacción de MSAL (Startup, Login, None...). */
   inProgress$: BehaviorSubject<InteractionStatus>;
-  /** Cambia las cuentas que MSAL "tiene en caché". */
   setAccounts(accounts: AccountInfo[], active?: AccountInfo | null): void;
   spies: {
     loginRedirect: jasmine.Spy;
@@ -49,10 +41,6 @@ export interface MsalMock {
   };
 }
 
-/**
- * MsalService + MsalBroadcastService simulados.
- * `active` por defecto es la primera cuenta; pasar `null` simula "hay cuentas pero ninguna activa".
- */
 export function createMsalMock(
   accounts: AccountInfo[] = [],
   active: AccountInfo | null = accounts[0] ?? null,
@@ -98,7 +86,6 @@ export function createMsalMock(
   };
 }
 
-/** Providers listos para TestBed con el mock de MSAL. */
 export function provideMsalMock(mock: MsalMock) {
   return [
     { provide: MsalService, useValue: mock.service },

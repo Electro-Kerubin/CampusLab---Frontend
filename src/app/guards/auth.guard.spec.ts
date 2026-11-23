@@ -1,3 +1,4 @@
+//PARA TESTING
 import { TestBed } from '@angular/core/testing';
 import {
   ActivatedRouteSnapshot,
@@ -18,10 +19,6 @@ import {
   provideMsalMock,
 } from '../../testing/msal-testing';
 
-/**
- * authGuard protege todas las rutas internas: exige sesión, cuenta activa y un rol válido.
- * AuthService se simula (su lógica ya tiene su propio spec); MSAL se simula con cuentas en memoria.
- */
 describe('authGuard', () => {
   let msal: MsalMock;
 
@@ -91,7 +88,7 @@ describe('authGuard', () => {
 
     const results: (boolean | UrlTree)[] = [];
     runGuard().subscribe((r) => results.push(r));
-    expect(results).toEqual([]); // todavía procesando el redirect: no decide
+    expect(results).toEqual([]);
 
     msal.inProgress$.next(InteractionStatus.None);
     expect(results).toEqual([true]);

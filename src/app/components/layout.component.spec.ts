@@ -1,3 +1,4 @@
+//PARA TESTING
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
@@ -92,9 +93,9 @@ describe('LayoutComponent', () => {
     it('encuentra reservas, laboratorios y recursos por texto', () => {
       comp.searchQuery.set('a102');
       expect(comp.labResults().map((l) => l.id)).toEqual([1]);
-      expect(comp.resourceResults().map((r) => r.id)).toEqual([101]); // por labName
+      expect(comp.resourceResults().map((r) => r.id)).toEqual([101]);
       comp.searchQuery.set('ultimaker');
-      expect(comp.resourceResults().map((r) => r.id)).toEqual([101]); // por marca
+      expect(comp.resourceResults().map((r) => r.id)).toEqual([101]);
       comp.searchQuery.set('jorge');
       expect(comp.bookingResults().map((b) => b.id)).toEqual([13]);
     });

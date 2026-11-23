@@ -1,3 +1,4 @@
+//PARA TESTING
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -24,7 +25,6 @@ describe('ReportsPageComponent', () => {
     fixture.detectChanges();
   });
 
-  /** Valor de la tarjeta KPI con la etiqueta dada. */
   const kpi = (label: string) =>
     Array.from(root().querySelectorAll('p')).find((p) => p.textContent?.trim() === label)?.previousElementSibling?.textContent?.trim();
 
@@ -58,7 +58,7 @@ describe('ReportsPageComponent', () => {
 
     const c = fixture.componentInstance;
     expect(c.reservasChartData().datasets[0].data).toEqual([5, 2]);
-    expect(c.cicloChartData().datasets[0].data).toEqual([45, 0]); // sin dato de ciclo → 0
+    expect(c.cicloChartData().datasets[0].data).toEqual([45, 0]);
     expect(root().querySelectorAll('canvas').length).toBe(2);
   });
 

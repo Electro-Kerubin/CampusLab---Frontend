@@ -1,12 +1,9 @@
+//PARA TESTING
 import { InteractionType } from '@azure/msal-browser';
 import { msalInstanceFactory } from './msal-config';
 import { msalGuardConfigFactory } from './msal-guard-config';
 import { environment } from './environments/environment';
 
-/**
- * Configuración de MSAL. Crear la instancia NO contacta a Azure (eso pasa recién en initialize/login),
- * así que se puede verificar la configuración sin red.
- */
 describe('Configuración de MSAL', () => {
   it('la instancia usa el clientId, authority y redirectUri del environment', () => {
     const auth = msalInstanceFactory().getConfiguration().auth;

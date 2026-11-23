@@ -1,6 +1,4 @@
 {
-  // Karma (pruebas unitarias) escucha en el 9876. Sin esto, Codespaces/VS Code reenvía el puerto y
-  // lo abre en el navegador, y esa pestaña se suma como "navegador de pruebas" y altera el resultado.
   "remote.portsAttributes": {
     "9876": {
       "label": "Karma (pruebas)",

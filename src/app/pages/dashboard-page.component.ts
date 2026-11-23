@@ -29,7 +29,6 @@ import {
   ],
   template: `
     <div class="p-4 sm:p-8 space-y-6">
-      <!-- Header row -->
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-xl font-bold text-gray-900">Dashboard</h1>
@@ -44,9 +43,7 @@ import {
         </button>
       </div>
 
-      <!-- KPI Cards -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Reservas Activas -->
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-start justify-between mb-3">
             <div>
@@ -63,7 +60,6 @@ import {
           </div>
         </div>
 
-        <!-- Ocupación -->
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-start justify-between mb-2">
             <div>
@@ -86,7 +82,6 @@ import {
           </div>
         </div>
 
-        <!-- Aprobaciones pendientes -->
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-start justify-between mb-3">
             <div>
@@ -101,9 +96,7 @@ import {
         </div>
       </div>
 
-      <!-- Middle row -->
       <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <!-- Workflow pipeline -->
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <div>
@@ -115,7 +108,6 @@ import {
             </button>
           </div>
 
-          <!-- Pipeline steps -->
           <div class="flex items-start gap-0 overflow-x-auto pb-2">
             @for (step of data.workflowSteps(); track step.id; let i = $index) {
               <div class="flex items-center">
@@ -144,7 +136,6 @@ import {
           </div>
         </div>
 
-        <!-- Lab usage line chart -->
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <div>
@@ -165,7 +156,6 @@ import {
         </div>
       </div>
 
-      <!-- Bottom row: Equipment status bar chart -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
@@ -192,7 +182,6 @@ import {
         </div>
       </div>
 
-      <!-- Mensajería: funcionalidad aún no implementada -->
       @if (canSeeDlq()) {
         <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -212,7 +201,6 @@ import {
         </div>
       }
 
-      <!-- Microservices status row -->
       <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
           <h3 class="font-semibold text-gray-900 text-sm mb-4">Estado de los servicios</h3>
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -245,21 +233,16 @@ export class DashboardPageComponent {
 
   data = this.dataService;
 
-  // Alertas de mensajería: el endpoint del BFF es solo para TECNICO/ADMIN.
-  // La sección está "En mantención" (aún no implementada): sin polling mientras tanto.
   readonly canSeeDlq = computed(() => this.auth.hasAnyRole('ADMIN', 'TECNICO'));
 
-  // Circle progress
   readonly circleCirc = 2 * Math.PI * 36;
   readonly circleOffset = computed(
     () => this.circleCirc - (this.data.equipmentOccupancy().pct / 100) * this.circleCirc
   );
 
-  // Chart types
   readonly lineChartType: ChartType = 'line';
   readonly barChartType: ChartType = 'bar';
 
-  // Lab usage line chart
   labUsageChartData = computed<ChartConfiguration['data']>(() => ({
     labels: this.data.usageByHour().map((d) => d.h),
     datasets: [
@@ -315,7 +298,6 @@ export class DashboardPageComponent {
     },
   };
 
-  // Equipment status bar chart
   equipmentChartData = computed<ChartConfiguration['data']>(() => ({
     labels: this.data.equipmentStatus().map((d) => d.name),
     datasets: [
@@ -401,5 +383,4 @@ export class DashboardPageComponent {
     this.router.navigate(['/bookings']);
   }
 }
-
 

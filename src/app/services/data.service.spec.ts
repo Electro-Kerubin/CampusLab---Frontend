@@ -1,3 +1,4 @@
+//PARA TESTING
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -5,7 +6,6 @@ import { DataService } from './data.service';
 import { environment } from '../../environments/environment';
 import { Booking, BookingStatus, CatalogResource } from '../models';
 
-/** Reserva mínima válida para las pruebas. */
 const booking = (id: number, status: BookingStatus, extra: Partial<Booking> = {}): Booking => ({
   id,
   resourceId: 100 + id,
@@ -49,7 +49,7 @@ describe('DataService', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    spyOn(console, 'warn'); // el fallback avisa por consola: se silencia en las pruebas
+    spyOn(console, 'warn');
     spyOn(console, 'error');
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -60,7 +60,6 @@ describe('DataService', () => {
 
   afterEach(() => http.verify());
 
-  /** Descarta las 9 cargas que hace el constructor, para probar cada método por separado. */
   const discardInitialLoads = () => http.match(() => true);
 
   it('al crearse carga todas las colecciones desde el backend', () => {
@@ -278,7 +277,7 @@ describe('DataService', () => {
       service.resources.set([
         resource(1, { quantityTotal: 3, quantityAvailable: 1 }),
         resource(2, { quantityTotal: 5, quantityAvailable: 5 }),
-        resource(3, { resourceType: 'INSUMO', quantityTotal: 100, quantityAvailable: 0 }), // no cuenta
+        resource(3, { resourceType: 'INSUMO', quantityTotal: 100, quantityAvailable: 0 }),
       ]);
       expect(service.equipmentOccupancy()).toEqual({ pct: 25, inUse: 2 });
     });
@@ -312,7 +311,7 @@ describe('DataService', () => {
 
       expect(service.reportKpis()).toEqual({
         totalReservas: 6,
-        tiempoCicloPromedio: 1, // (90 + 30) / 2 = 60 min = 1 h (las horas sin dato no cuentan)
+        tiempoCicloPromedio: 1,
         tasaAprobacion: 50,
         tasaCancelacion: 25,
       });

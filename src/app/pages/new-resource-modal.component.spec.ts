@@ -1,14 +1,10 @@
+//PARA TESTING
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { DataService } from '../services/data.service';
 import { CreateResourceRequest, ResourceType } from '../models';
 import { NewResourceModalComponent } from './catalog-page.component';
 
-/**
- * Regresión del QA "Los INSUMOS requieren 'unitOfMeasure'" (409): el modal estaba fijo en EQUIPO y no
- * recibía la pestaña activa, así que en "Insumos" mostraba los campos de un equipo y enviaba
- * resourceType INSUMO sin unidad de medida.
- */
 describe('NewResourceModalComponent', () => {
   let fixture: ComponentFixture<NewResourceModalComponent>;
   let emitted: CreateResourceRequest[];
@@ -60,7 +56,6 @@ describe('NewResourceModalComponent', () => {
     const component = create('INSUMO');
     fillCommonFields(component);
     component.unitOfMeasure = '  caja ';
-    // datos de equipo que quedaron escritos en el formulario no deben viajar con un insumo
     component.serialNumber = 'SN-1';
     component.brand = 'Marca';
 

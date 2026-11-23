@@ -1,13 +1,11 @@
 name: Frontend CI
 
-# Se ejecuta en cada push a las ramas de trabajo y en cada Pull Request hacia ellas.
 on:
   push:
     branches: [main, dev, test]
   pull_request:
     branches: [main, dev, test]
 
-# Si llega un push nuevo a la misma rama, se cancela la ejecución anterior (ahorra minutos de CI).
 concurrency:
   group: frontend-ci-${{ github.ref }}
   cancel-in-progress: true
@@ -21,11 +19,10 @@ jobs:
       - name: Descargar el código
         uses: actions/checkout@v4
 
-      # Angular 21 requiere Node ^20.19, ^22.12 o >=24.
-      - name: Instalar Node 22
+      - name: Instalar Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Instalar dependencias (exactas, desde package-lock.json)
@@ -34,8 +31,6 @@ jobs:
       - name: Lint (ESLint + angular-eslint)
         run: npm run lint
 
-      # Karma + Jasmine en Chrome headless (ubuntu-latest ya trae Google Chrome).
-      # Falla si alguna prueba falla o si la cobertura baja del umbral de karma.conf.js.
       - name: Pruebas unitarias con cobertura
         run: npm run test:ci
 

@@ -1,3 +1,4 @@
+//PARA TESTING
 import { ApplicationInitStatus, Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
@@ -15,18 +16,6 @@ import { DashboardPageComponent } from './pages/dashboard-page.component';
 import { LoginPageComponent } from './pages/login-page.component';
 import { ReportsPageComponent } from './pages/reports-page.component';
 
-/**
- * Qué pasa al abrir la aplicación. Se prueba con la CONFIGURACIÓN REAL de la app (appConfig: router, guards,
- * interceptores, arranque de MSAL), AuthService y MsalService reales. Solo se simula QUÉ CUENTA hay en MSAL
- * (no se puede hacer un login real de Microsoft en un test) y se reemplazan las plantillas de las pantallas
- * para no cargar gráficos ni datos.
- */
-
-/**
- * Cliente MSAL real al que solo se le dice qué cuenta tiene en caché. Imita lo que hace el MSAL de verdad con
- * localStorage: leer la caché ANTES de initialize() lanza uninitialized_public_client_application, y
- * initialize() tarda (descifra la caché). Si la app lee la sesión antes de tiempo, estos tests lo detectan.
- */
 class SimulatedMsal extends PublicClientApplication {
   private ready = false;
 
@@ -56,14 +45,12 @@ class SimulatedMsal extends PublicClientApplication {
     return this.account;
   }
   override setActiveAccount(): void {
-    // la cuenta activa es fija en esta simulación
   }
   override async handleRedirectPromise(): Promise<AuthenticationResult | null> {
     this.requireInitialized();
     return this.redirectResult;
   }
   override async logoutRedirect(): Promise<void> {
-    // no se sale a Microsoft en las pruebas
   }
 }
 
@@ -89,20 +76,16 @@ const SCREENS: Type<unknown>[] = [
   AuditPageComponent,
 ];
 
-/**
- * Abre `path` en una aplicación recién arrancada y devuelve la URL en la que termina.
- * Reproduce el arranque real: primero los inicializadores de la app (MSAL), luego AppComponent y el router.
- */
 async function open(
   path: string,
   account: AccountInfo | null,
   redirectResult: AuthenticationResult | null = null
 ): Promise<string> {
-  TestBed.resetTestingModule(); // cada llamada es una aplicación recién abierta, aunque un test abra varias
+  TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       ...appConfig.providers,
-      provideHttpClientTesting(), // sin red real: reemplaza el backend HTTP de appConfig
+      provideHttpClientTesting(),
       { provide: MSAL_INSTANCE, useFactory: () => new SimulatedMsal(account, redirectResult) },
     ],
   });
@@ -110,13 +93,12 @@ async function open(
     TestBed.overrideComponent(screen, { set: { template: '<router-outlet />', imports: [RouterOutlet] } });
   }
 
-  await TestBed.inject(ApplicationInitStatus).donePromise; // inicializadores de la app (arranque de MSAL)
+  await TestBed.inject(ApplicationInitStatus).donePromise;
   const root = TestBed.createComponent(AppComponent);
-  root.detectChanges(); // ngOnInit: handleRedirectObservable, como al abrir la app de verdad
+  root.detectChanges();
 
   const router = TestBed.inject(Router);
   await router.navigateByUrl(path);
-  // tiempo para que AppComponent haga (o NO haga) su propia navegación; antes forzaba /dashboard a los 100 ms
   await new Promise((resolve) => setTimeout(resolve, 400));
   return router.url;
 }

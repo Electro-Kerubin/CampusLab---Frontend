@@ -1,9 +1,5 @@
-// Tipos compartidos de la aplicación CampusLab
-
 export type PageId = 'dashboard' | 'bookings' | 'catalog' | 'reports' | 'audit';
 
-// Coincide 1:1 con el enum BookingStatus de ms-campuslab-bookings.
-// Ojo: EN_PREPARACION va SIN tilde (así está en el backend).
 export type BookingStatus =
   | 'SOLICITADA'
   | 'APROBADA'
@@ -23,27 +19,19 @@ export type EventType =
 
 export type CatalogTab = 'labs' | 'equipment' | 'supplies';
 
-/** Roles de App Role de Azure AD, tal como los valida cada microservicio (@PreAuthorize). */
 export type Role = 'ADMIN' | 'TECNICO' | 'ESTUDIANTE' | 'AUDITOR';
 
 export interface AppUser {
   name: string;
   email: string;
   avatar: string;
-  role: string; // Etiqueta legible para mostrar en la UI (puede combinar varios roles)
-  /** Roles crudos (en mayúsculas) tal como vienen del claim "roles" del id_token. */
+  role: string;
   roles: Role[];
 }
 
-/**
- * Refleja BookingResponse de ms-campuslab-bookings (vía ms-campuslab-bff).
- * startTime/endTime/createdAt/updatedAt llegan como LocalDateTime ISO
- * (ej: "2026-09-20T09:00:00", sin zona horaria).
- */
 export interface Booking {
   id: number;
   resourceId: number;
-  /** Nombre del recurso, agregado por el BFF desde ms-catalog (puede venir null si ese servicio no responde). */
   resourceNombre: string | null;
   studentEmail: string;
   purpose: string;
@@ -54,9 +42,6 @@ export interface Booking {
   updatedAt: string;
 }
 
-// ─── Catálogo: refleja ms-campuslab-catalog (vía ms-campuslab-bff) ─────────
-
-/** Refleja LabResponseDTO. */
 export interface Lab {
   id: number;
   name: string;
@@ -65,11 +50,9 @@ export interface Lab {
   createdAt: string;
 }
 
-/** Un "recurso" reservable: SALA, EQUIPO o INSUMO. Es lo que referencia Booking.resourceId. */
 export type ResourceType = 'SALA' | 'EQUIPO' | 'INSUMO';
 export type ResourceStatus = 'DISPONIBLE' | 'EN_USO' | 'MANTENIMIENTO' | 'BAJA';
 
-/** Refleja ResourceResponseDTO. */
 export interface CatalogResource {
   id: number;
   labId: number;
@@ -90,7 +73,6 @@ export interface CatalogResource {
   updatedAt: string;
 }
 
-/** Refleja CategoryResponseDTO. */
 export interface Category {
   id: number;
   name: string;
@@ -98,14 +80,12 @@ export interface Category {
   createdAt: string;
 }
 
-/** POST/PUT /api/catalog/labs */
 export interface LabRequest {
   name: string;
   location?: string;
   capacity: number;
 }
 
-/** POST /api/catalog/resources */
 export interface CreateResourceRequest {
   labId: number;
   categoryId: number;
@@ -122,7 +102,6 @@ export interface CreateResourceRequest {
   };
 }
 
-/** PUT /api/catalog/resources/{id}/stock */
 export interface StockAdjustRequest {
   delta: number;
   referenceBookingId?: number;
@@ -142,14 +121,6 @@ export interface AuditEvent {
   detalle: string;
 }
 
-// ─── Contratos REST con el backend Spring Boot ─────────────────────────
-
-/**
- * POST /api/bookings.
- * studentEmail se omite normalmente: el backend lo completa desde el JWT
- * del usuario autenticado. Solo tiene sentido enviarlo si un TECNICO/ADMIN
- * reserva a nombre de otro estudiante.
- */
 export interface CreateBookingRequest {
   resourceId: number;
   purpose: string;
@@ -158,17 +129,10 @@ export interface CreateBookingRequest {
   studentEmail?: string;
 }
 
-/** PUT /api/bookings/{id}/status */
 export interface UpdateBookingStatusRequest {
   status: BookingStatus;
 }
 
-/**
- * Usados solo en el Dashboard. No reflejan ningún endpoint real — no existe
- * ms-catalog/ms-report que exponga "impresoras/microscopios/pcs" ni
- * ocupación por categoría de equipo; el Dashboard los muestra con datos de
- * demostración a propósito hasta que haya un backend real para esto.
- */
 export interface UsageByHour {
   h: string;
   impresoras: number;
@@ -184,12 +148,6 @@ export interface EquipmentStatusSummary {
   mantenimiento: number;
 }
 
-/**
- * Refleja BookingHourlyMetricResponse de ms-campuslab-report
- * (GET /api/report/kpis?range=last24h, vía el BFF). Se llena consumiendo
- * eventos Kafka del topic "bookings.events" — viene vacío si Kafka no está
- * corriendo o no hubo reservas SOLICITADA en las últimas 24h.
- */
 export interface BookingHourlyMetric {
   labId: number;
   bucketHour: string;
@@ -197,11 +155,6 @@ export interface BookingHourlyMetric {
   avgCycleMinutes: number | null;
 }
 
-/**
- * Refleja ResourceUsageMetricResponse de ms-campuslab-report
- * (GET /api/report/top-resources?range=last7d, vía el BFF). Mismo origen
- * (eventos Kafka) que BookingHourlyMetric.
- */
 export interface ResourceUsageMetric {
   resourceId: number;
   periodStart: string;
@@ -210,19 +163,13 @@ export interface ResourceUsageMetric {
   totalDurationMinutes: number | null;
 }
 
-/**
- * Refleja DlqStatusDTO de ms-campuslab-notify (GET /api/notify/dlq, vía el BFF).
- * "UNAVAILABLE" lo agrega el BFF cuando ms-notify o RabbitMQ no responden.
- */
 export type DlqHealth = 'OK' | 'ALERT' | 'UNAVAILABLE';
 
 export interface DlqQueueStatus {
   label: string;
   queue: string;
   dlq: string;
-  /** Mensajes esperando en la cola principal. */
   pending: number;
-  /** Mensajes en la DLQ (fallaron tras los reintentos o expiraron sin procesarse). */
   failed: number;
 }
 
@@ -233,12 +180,6 @@ export interface DlqStatus {
   checkedAt: string;
 }
 
-/**
- * Fila del donut de "Distribución de Estados". No viene de ningún backend:
- * se calcula en el cliente agrupando dataService.bookings() por estado
- * (son datos reales de ms-campuslab-bookings, solo que agregados acá en
- * vez de en ms-report).
- */
 export interface StatusDistribution {
   name: string;
   value: number;
@@ -271,7 +212,6 @@ export const STATUS_CLASSES: Record<BookingStatus, string> = {
   CANCELADA: 'status-cancelada',
 };
 
-/** Mismos estados que STATUS_CLASSES, pero en hex — para charts (Chart.js no acepta clases Tailwind). */
 export const STATUS_COLORS: Record<BookingStatus, string> = {
   SOLICITADA: '#fbbf24',
   APROBADA: '#5cb85c',
@@ -290,11 +230,6 @@ export const ALL_STATUSES: BookingStatus[] = [
   'CANCELADA',
 ];
 
-/**
- * Máquina de estados real de ms-campuslab-bookings (ver
- * BookingService.TRANSICIONES_VALIDAS). El frontend la usa para no ofrecer
- * transiciones que el backend rechazaría con 409/400.
- */
 export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   SOLICITADA: ['APROBADA', 'CANCELADA'],
   APROBADA: ['EN_PREPARACION', 'CANCELADA'],

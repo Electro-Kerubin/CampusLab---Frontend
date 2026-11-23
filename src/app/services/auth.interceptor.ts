@@ -12,14 +12,6 @@ import { MsalService } from '@azure/msal-angular';
 import { Router } from '@angular/router';
 import { AccountInfo } from '@azure/msal-browser';
 
-/**
- * Interceptor HTTP que:
- * 1. Agrega el token a TODAS las solicitudes al backend
- * 2. Refresca el id_token en silencio cuando está por expirar (dura 1 h):
- *    antes se enviaba el id_token cacheado de MSAL sin refrescar, así que
- *    pasada una hora todas las llamadas daban 401 y se cerraba la sesión.
- * 3. Maneja errores 401/403
- */
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
   private readonly msalService = inject(MsalService);
@@ -31,7 +23,6 @@ export class AuthInterceptor implements HttpInterceptor {
   ): Observable<HttpEvent<unknown>> {
     const accounts = this.msalService.instance.getAllAccounts();
     if (accounts.length === 0) {
-      // Sin sesión, pasar la solicitud tal cual
       return next.handle(req);
     }
 
@@ -40,7 +31,6 @@ export class AuthInterceptor implements HttpInterceptor {
       return next.handle(req);
     }
 
-    // Token fresco (refresca en silencio si el cacheado está por expirar)
     return from(this.getFreshIdToken(account)).pipe(
       switchMap((token) => {
         if (token) {
@@ -55,12 +45,10 @@ export class AuthInterceptor implements HttpInterceptor {
       }),
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401) {
-          // La sesión murió de verdad (el refresco falló): cerrar sesión
           console.error('❌ Token rechazado por el servidor (401)');
           this.msalService.logoutRedirect().subscribe();
           this.router.navigate(['/login']);
         } else if (error.status === 403) {
-          // No tiene permisos
           console.error('❌ Sin permisos para acceder a este recurso (403)');
           this.router.navigate(['/dashboard']);
         }
@@ -69,11 +57,6 @@ export class AuthInterceptor implements HttpInterceptor {
     );
   }
 
-  /**
-   * Devuelve un id_token válido: usa el cacheado si aún le queda vida
-   * (margen de 2 min) y, si no, lo refresca en silencio con el refresh
-   * token que MSAL guardó al iniciar sesión.
-   */
   private async getFreshIdToken(account: AccountInfo): Promise<string | null> {
     const cached = account.idToken;
     try {
@@ -92,7 +75,6 @@ export class AuthInterceptor implements HttpInterceptor {
     }
   }
 
-  /** true si el JWT expira en menos de `seconds` segundos (o no se puede leer). */
   private expiresWithin(jwt: string, seconds: number): boolean {
     try {
       const base64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');

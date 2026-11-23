@@ -1,3 +1,4 @@
+//PARA TESTING
 import { TestBed } from '@angular/core/testing';
 import { InteractionStatus } from '@azure/msal-browser';
 import { AuthService } from './auth.service';
@@ -9,10 +10,6 @@ import {
   provideMsalMock,
 } from '../../testing/msal-testing';
 
-/**
- * AuthService REAL con MSAL simulado: se prueba cómo se arma el usuario a partir de la cuenta de
- * Azure AD (roles del token, etiqueta, iniciales) y qué se le pide a MSAL. Nunca se llama a Azure.
- */
 describe('AuthService', () => {
   let msal: MsalMock;
 
@@ -36,7 +33,6 @@ describe('AuthService', () => {
 
     it('si MSAL aún no está inicializado no rompe la app y lee la sesión cuando MSAL termina', () => {
       spyOn(console, 'warn');
-      // Como en la app real: mientras MSAL arranca el estado es Startup y leer la caché lanza error
       const mock = createMsalMock([], null, InteractionStatus.Startup);
       const instance = mock.service.instance as unknown as { getAllAccounts: () => unknown[] };
       const realGetAll = instance.getAllAccounts;
@@ -48,7 +44,6 @@ describe('AuthService', () => {
       expect(() => (auth = create(mock))).not.toThrow();
       expect(auth.currentUser()).toBeNull();
 
-      // MSAL termina de inicializar: ya se puede leer la cuenta guardada
       instance.getAllAccounts = realGetAll;
       mock.setAccounts([accountWithRoles(['ADMIN'])]);
       mock.inProgress$.next(InteractionStatus.None);
@@ -88,7 +83,6 @@ describe('AuthService', () => {
     });
 
     it('como último recurso lee los roles del id_token guardado por MSAL en localStorage', () => {
-      // AuthService decodifica con atob() (base64 estándar), igual que lo guarda MSAL en esta app
       const payload = btoa(JSON.stringify({ roles: ['TECNICO'] }));
       localStorage.setItem('MSAL.cuenta.id_token', `cabecera.${payload}.firma`);
 
@@ -119,7 +113,6 @@ describe('AuthService', () => {
 
       expect(auth.currentUser()).toBeNull();
       expect(auth.isAuthenticated()).toBeFalse();
-      // Se llama al menos una vez (hoy son 2: constructor + emisión None de inProgress$; ver reporte)
       expect(msal.spies.logoutRedirect).toHaveBeenCalled();
     });
   });
@@ -129,7 +122,7 @@ describe('AuthService', () => {
     expect(auth.currentUser()).toBeNull();
 
     msal.setAccounts([accountWithRoles(['TECNICO'])]);
-    msal.inProgress$.next(InteractionStatus.HandleRedirect); // mientras MSAL procesa el retorno no se relee
+    msal.inProgress$.next(InteractionStatus.HandleRedirect);
     expect(auth.currentUser()).toBeNull();
 
     msal.inProgress$.next(InteractionStatus.None);

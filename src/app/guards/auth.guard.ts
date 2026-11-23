@@ -5,14 +5,6 @@ import { InteractionStatus } from '@azure/msal-browser';
 import { filter, map, take } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
-/**
- * Guard que protege rutas internas. Valida:
- * 1. Hay sesión iniciada
- * 2. El token tiene roles válidos
- * 3. El token no ha expirado
- *
- * Si el usuario no tiene roles válidos, lo redirige al login.
- */
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
@@ -25,7 +17,6 @@ export const authGuard: CanActivateFn = () => {
     map(() => {
       console.log('🔍 [AUTH GUARD] ========== VERIFICACIÓN DE ACCESO ==========');
 
-      // 1. Verificar sesión
       const isAuth = auth.isAuthenticated();
       console.log('📌 auth.isAuthenticated():', isAuth);
 
@@ -34,7 +25,6 @@ export const authGuard: CanActivateFn = () => {
         return router.parseUrl('/login');
       }
 
-      // 2. Obtener account
       const accounts = msalService.instance.getAllAccounts();
       console.log('📌 Número de cuentas:', accounts.length);
 
@@ -52,7 +42,6 @@ export const authGuard: CanActivateFn = () => {
       console.log('📌 Usuario:', account.username);
       console.log('📌 ID Token Claims:', account.idTokenClaims);
 
-      // 3. BÚSQUEDA DE ROLES - TODAS LAS UBICACIONES
       let roles: string[] = [];
 
       if (account.idTokenClaims?.['roles']) {
@@ -66,7 +55,6 @@ export const authGuard: CanActivateFn = () => {
       console.log('📌 Roles encontrados:', roles);
       console.log('📌 Tiene roles válidos:', roles.length > 0);
 
-      // VALIDACIÓN FINAL: Uno de los roles válidos
       const VALID_ROLES = ['ADMIN', 'ESTUDIANTE', 'AUDITOR', 'TECNICO'];
       const hasValidRole = roles.some((role: string) => VALID_ROLES.includes(role));
 
@@ -81,7 +69,6 @@ export const authGuard: CanActivateFn = () => {
         console.error('   Roles válidos:', VALID_ROLES);
         console.error('🔴 Ejecutando logout...');
 
-        // LOGOUT COMPLETO
         localStorage.clear();
         sessionStorage.clear();
         msalService.logoutRedirect().subscribe();
