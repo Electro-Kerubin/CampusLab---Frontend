@@ -198,6 +198,20 @@ export interface BookingHourlyMetric {
 }
 
 /**
+ * Refleja CycleTimeDTO del BFF (GET /api/report/cycle-time): tiempo de ciclo de las reservas, de la solicitud a la
+ * devolución, de los últimos 7 días. Lo calcula ms-campuslab-report con los resúmenes que ms-campuslab-audit publica en
+ * el tópico Kafka "audit.timeline". avgCycleMinutes/maxCycleMinutes son null mientras no haya reservas devueltas.
+ */
+export interface CycleTime {
+  days: number;
+  returned: number;
+  cancelled: number;
+  inProgress: number;
+  avgCycleMinutes: number | null;
+  maxCycleMinutes: number | null;
+}
+
+/**
  * Refleja ResourceUsageMetricResponse de ms-campuslab-report
  * (GET /api/report/top-resources?range=last7d, vía el BFF). Mismo origen
  * (eventos Kafka) que BookingHourlyMetric.

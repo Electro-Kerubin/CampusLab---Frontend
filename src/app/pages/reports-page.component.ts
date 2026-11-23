@@ -126,7 +126,7 @@ import { ChartConfiguration, ChartOptions, ChartType } from 'chart.js';
         </div>
       </div>
 
-      <p class="text-xs text-gray-400 font-mono">GET /api/report/kpis?range=last24h · GET /api/report/top-resources?range=last7d · Kafka topic: bookings.events</p>
+      <p class="text-xs text-gray-400 font-mono">GET /api/report/kpis?range=last24h · GET /api/report/top-resources?range=last7d · GET /api/report/cycle-time · Kafka topics: bookings.events, audit.timeline</p>
     </div>
   `,
 })
@@ -149,7 +149,7 @@ export class ReportsPageComponent {
     return [
       { label: 'Reservas (24h, ms-report)', value: `${k.totalReservas}`, icon: Activity, color: 'bg-green-50 text-[#5cb85c]' },
       { label: 'Tasa Aprobación (todas)', value: `${k.tasaAprobacion}%`, icon: TrendingUp, color: 'bg-blue-50 text-blue-600' },
-      { label: 'Tiempo de Ciclo Prom. (24h)', value: `${k.tiempoCicloPromedio}h`, icon: Clock, color: 'bg-yellow-50 text-yellow-600' },
+      { label: 'Tiempo de Ciclo Prom. (7d)', value: `${k.tiempoCicloPromedio}h`, icon: Clock, color: 'bg-yellow-50 text-yellow-600' },
       { label: 'Tasa Cancelación (todas)', value: `${k.tasaCancelacion}%`, icon: Activity, color: 'bg-purple-50 text-purple-600' },
     ];
   });

@@ -16,6 +16,7 @@ import {
   UsageByHour,
   EquipmentStatusSummary,
   BookingHourlyMetric,
+  CycleTime,
   ResourceUsageMetric,
   DlqStatus,
   StatusDistribution,
@@ -56,6 +57,8 @@ export class DataService {
   readonly equipmentStatus = signal<EquipmentStatusSummary[]>([]);
   /** GET /api/report/kpis (ms-campuslab-report) — reservas/hora últimas 24h. Vacío si Kafka no está corriendo. */
   readonly hourlyMetrics = signal<BookingHourlyMetric[]>([]);
+  /** GET /api/report/cycle-time (ms-campuslab-report) — tiempo de ciclo últimos 7 días (tópico Kafka audit.timeline). null = aún no cargó. */
+  readonly cycleTime = signal<CycleTime | null>(null);
   /** GET /api/report/top-resources (ms-campuslab-report) — uso de recursos últimos 7 días. */
   readonly resourceUsage = signal<ResourceUsageMetric[]>([]);
   /** GET /api/notify/dlq (ms-campuslab-notify) — mensajes fallidos en las DLQ de RabbitMQ. null = el backend no respondió. */
@@ -83,6 +86,7 @@ export class DataService {
     this.loadUsageByHour();
     this.loadEquipmentStatus();
     this.loadHourlyMetrics();
+    this.loadCycleTime();
     this.loadResourceUsage();
   }
 
@@ -227,6 +231,17 @@ export class DataService {
       .subscribe((data) => this.hourlyMetrics.set(data));
   }
 
+  /**
+   * Tiempo de ciclo (últimos 7 días) desde ms-campuslab-report, calculado con el tópico Kafka audit.timeline.
+   * Como los demás KPIs de Kafka, si falla NO cae en datos semilla: queda en null y la tarjeta muestra 0.
+   */
+  loadCycleTime(): void {
+    this.http
+      .get<CycleTime>(`${this.api}/report/cycle-time`)
+      .pipe(catchError(() => this.fallback<CycleTime | null>('report/cycle-time', null)))
+      .subscribe((data) => this.cycleTime.set(data));
+  }
+
   /** Uso de recursos (últimos 7 días) desde ms-campuslab-report. Mismo caso que arriba. */
   loadResourceUsage(): void {
     this.http
@@ -279,18 +294,17 @@ export class DataService {
   });
 
   /**
-   * KPIs resumen para las 4 tarjetas de Reportería. totalReservas y
-   * tiempoCicloPromedio salen de ms-report (últimas 24h); tasaAprobacion y
-   * tasaCancelacion se calculan sobre TODAS las reservas cargadas de
-   * ms-campuslab-bookings (no hay ese cálculo en ms-report).
+   * KPIs resumen para las 4 tarjetas de Reportería. totalReservas sale de
+   * ms-report (últimas 24h); tiempoCicloPromedio también, pero de los
+   * últimos 7 días (solicitud -> devolución, tópico Kafka audit.timeline);
+   * tasaAprobacion y tasaCancelacion se calculan sobre TODAS las reservas
+   * cargadas de ms-campuslab-bookings (no hay ese cálculo en ms-report).
    */
   readonly reportKpis = computed(() => {
     const hourly = this.hourlyMetrics();
     const totalReservas = hourly.reduce((acc, m) => acc + m.bookingsCount, 0);
-    const cycleSamples = hourly.filter((m) => m.avgCycleMinutes != null);
-    const tiempoCicloPromedio = cycleSamples.length
-      ? cycleSamples.reduce((acc, m) => acc + (m.avgCycleMinutes as number), 0) / cycleSamples.length / 60
-      : 0;
+    const avgCycleMinutes = this.cycleTime()?.avgCycleMinutes;
+    const tiempoCicloPromedio = avgCycleMinutes != null ? avgCycleMinutes / 60 : 0;
 
     const bs = this.bookings();
     const aprobadas = bs.filter((b) => b.status !== 'SOLICITADA' && b.status !== 'CANCELADA').length;
